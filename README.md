@@ -172,6 +172,8 @@ All visualization operations live in the Viewer panel — there is no separate c
 
 <img src="assets/readme/figure_system.webp" width="100%" alt="System overview: data sources and filtering, the unified network with its four heads and rigid composition, and world-space outputs">
 
+<div align="center"><sub>Top band: how the supervision is produced and filtered. Middle: the unified network. Bottom: what one forward pass returns. In the source donut, only the public <b>1,021.514 h</b> of pipeline pseudo-labels is released — the human-annotated hours beside it are the Stage 2 calibration set and are not part of the release.</sub></div>
+
 One shared encode per frame, four factorized heads, then explicit rigid composition into world space — so a world-space error updates the camera branch and the hand branch together.
 
 ### Model at a glance
@@ -194,8 +196,6 @@ One shared encode per frame, four factorized heads, then explicit rigid composit
 
 ### Where the supervision comes from
 
-<img src="assets/readme/figure_pipeline.webp" width="100%" alt="EgoPipeline: preprocessing, then intrinsics, monocular depth, metric camera track, camera-frame MANO and trajectory cleanup">
-
 **EgoPipeline** is our open-source implementation of the conventional multi-stage route, and it stays in the project as the *supervision generator*, not as the deployment path:
 
 | Stage | Component | Produces |
@@ -212,6 +212,8 @@ Its output is **pseudo-label, not ground truth** — that distinction is load-be
 ### Why one model instead of the chain
 
 <img src="assets/readme/figure_execution.webp" width="100%" alt="Execution accounting for the multi-stage pipeline versus one shared forward pass">
+
+<div align="center"><sub>This figure is <b>internal to the pipeline</b>: rewriting its serial 1-GPU execution as a scheduled 4-GPU worker pool takes 179.0 s down to 63.9 s per 270 frames, a <b>2.8×</b> speedup. That optimised version is the baseline the <b>5.0×</b> above is measured against — the two numbers are different comparisons and do not multiply.</sub></div>
 
 A staged chain has structural costs that better engineering does not remove: each stage re-encodes the same video, camera and hands meet only in post-processing, every stage is capped by the one before it, and one operator regressing regresses the whole record. Under whole-process accounting — raw input video in, stored unified structured state out, identical inputs and hardware — the unified model reaches **5.0× the effective data-production throughput of EgoPipeline**. That figure is end-to-end data production, *not* model forward time, and the baseline is EgoPipeline already distributed-optimised with Ray multi-GPU operators, persistent workers and asynchronous CPU stages.
 
