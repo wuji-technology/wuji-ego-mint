@@ -7,11 +7,18 @@ so every moving asset here is an animated WebP.
 
 | File | Source | What it shows |
 | --- | --- | --- |
-| `teaser.webp` | `wuji_both_2d_world_motion_3d_mujoco_3d_wuji_retarget_3d (13).mp4`, frame at 7.4 s — the 8-panel HOT3D render of inference-sample episode 5 | The four prediction panels: ego view, world space, MuJoCo replay, Wuji retarget |
-| `world_space.webp` | same render, 1.2–11.6 s | All eight panels: device ground truth beside MINT prediction in every space |
+| `scale.webp` | `mos_L2.mp4`, the 108-tile wall built from `assets/mint_new` renders | Scale of the released supervision — the README hero, directly under the film |
+| `world_space.webp` | `wuji_both_2d_world_motion_3d_mujoco_3d_wuji_retarget_3d (13).mp4`, 1.2–11.6 s — the 8-panel HOT3D render of inference-sample episode 5 | All eight panels: device ground truth beside MINT prediction in every space |
 | `pipeline_vs_mint.webp` | `ego4d_c001_f869_ep00175026_o001` (`original_rgb` / `egopipeline_prediction` / `model_prediction`), 2.4–8.0 s, burnt-in title bars cropped | Same frames through the multi-stage pipeline and through MINT |
-| `scale.webp` | `mos_L2.mp4`, the 108-tile wall built from `assets/mint_new` renders | Scale of the released supervision |
-| `figure_*.webp` | `overleaf/materials/pictures/*` | The paper's own figures, downscaled |
+| `figure_execution.webp` | `materials/sub_pic/ego_pipeline/execution_optimization/v1/images/07_execution_optimization_v2.png`, downscaled to 1700 px wide | Measured EgoPipeline execution telemetry: serial 1-GPU baseline, then the scheduled 4-GPU worker pool. Kept for reuse; **not referenced by either README** — the 2.8× it shows is now stated in the text of *Why one model instead of the chain* |
+| `figure_architecture.webp`, `figure_system.webp` | `overleaf/materials/pictures/*` | The paper's own figures, downscaled |
+| `teaser.webp` | same render as `world_space.webp`, frame at 7.4 s | The three prediction panels — ego view, world space, Wuji retarget. Illustrates *Why one model instead of the chain* |
+
+The film that opens both READMEs is `out/MINT_full_en.mp4` in the promo project
+(1 min 41 s, 1920 × 1080, 72 MB). It is deliberately not committed here: GitHub
+only renders an inline player for `github.com/user-attachments` links, so the
+MP4 has to be uploaded through a browser comment box and the resulting link
+pasted into the placeholder at the top of each README.
 
 ## How the comparison clip was chosen
 

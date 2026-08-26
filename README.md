@@ -1,6 +1,21 @@
 <div align="center">
 
-<img src="assets/readme/teaser.webp" width="100%" alt="Ego view with reprojected MANO, the same motion as a world-space camera and two-hand trajectory, and that trajectory retargeted to the Wuji hand in MuJoCo">
+<!--
+  FULL FILM (1 min 41 s) — the promo film opens the README, above the hero
+  wall. Source: `out/MINT_full_en.mp4` in the promo project, 1920 × 1080,
+  72 MB, kept out of this repository on purpose. GitHub renders an inline
+  player only for github.com/user-attachments URLs, and those can only be
+  minted through the browser: open any issue or PR comment box in this
+  repository, drag the MP4 into it, copy the generated
+  https://github.com/user-attachments/assets/...
+  link, and paste it on its own line right below this comment. Do not commit
+  the MP4 — a <video> tag pointing at a file in the repository is stripped by
+  GitHub's markdown sanitizer and renders as nothing.
+-->
+
+<img src="assets/readme/scale.webp" width="100%" alt="108 MINT renders playing at once, one tile per clip">
+
+<sub>108 MINT renders from the three released corpora, playing at once. The full release is 1,021.514 h · 560,649 episodes · 110,323,558 frames of structured supervision.</sub>
 
 <h1>MINT: Minting a Unified Model for World-Space Camera and Hand Motion<br>from Scalable Egocentric Pipeline Supervision</h1>
 
@@ -19,16 +34,6 @@ Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Y
 [中文说明](README_ZH.md)
 
 </div>
-
-<!--
-  FULL FILM (1 min 41 s). GitHub renders an inline player only for
-  github.com/user-attachments URLs, and those can only be minted through the
-  browser: open any issue or PR comment box in this repository, drag the MP4
-  into it, copy the generated https://github.com/user-attachments/assets/...
-  link, and paste it on its own line right here. Do not commit the MP4 — a
-  <video> tag pointing at a file in the repository is stripped by GitHub's
-  markdown sanitizer and renders as nothing.
--->
 
 <img src="assets/readme/world_space.webp" width="100%" alt="Eight panels: device ground truth beside MINT prediction in the ego view, in world space, and retargeted to the Wuji hand in MuJoCo">
 
@@ -211,15 +216,11 @@ Its output is **pseudo-label, not ground truth** — that distinction is load-be
 
 ### Why one model instead of the chain
 
-<img src="assets/readme/figure_execution.webp" width="100%" alt="Execution accounting for the multi-stage pipeline versus one shared forward pass">
+<img src="assets/readme/teaser.webp" width="100%" alt="Three panels from one forward pass: ego view with reprojected MANO, the world-space camera and two-hand trajectory, and that trajectory retargeted to the Wuji hand in MuJoCo">
 
-<div align="center"><sub>This figure is <b>internal to the pipeline</b>: rewriting its serial 1-GPU execution as a scheduled 4-GPU worker pool takes 179.0 s down to 63.9 s per 270 frames, a <b>2.8×</b> speedup. That optimised version is the baseline the <b>5.0×</b> above is measured against — the two numbers are different comparisons and do not multiply.</sub></div>
+<div align="center"><sub>What a single forward pass returns, in the three spaces the staged chain only reaches by post-processing its own stage outputs: ego-view MANO, world-space camera and two-hand trajectory, and the Wuji-hand retarget. All three panels are prediction.</sub></div>
 
-A staged chain has structural costs that better engineering does not remove: each stage re-encodes the same video, camera and hands meet only in post-processing, every stage is capped by the one before it, and one operator regressing regresses the whole record. Under whole-process accounting — raw input video in, stored unified structured state out, identical inputs and hardware — the unified model reaches **5.0× the effective data-production throughput of EgoPipeline**. That figure is end-to-end data production, *not* model forward time, and the baseline is EgoPipeline already distributed-optimised with Ray multi-GPU operators, persistent workers and asynchronous CPU stages.
-
-<img src="assets/readme/scale.webp" width="100%" alt="108 MINT renders playing at once, one tile per clip">
-
-<div align="center"><sub>108 MINT renders from the three released corpora, playing at once. The full release is 1,021.514 h · 560,649 episodes · 110,323,558 frames of structured supervision.</sub></div>
+A staged chain has structural costs that better engineering does not remove: each stage re-encodes the same video, camera and hands meet only in post-processing, every stage is capped by the one before it, and one operator regressing regresses the whole record. Under whole-process accounting — raw input video in, stored unified structured state out, identical inputs and hardware — the unified model reaches **5.0× the effective data-production throughput of EgoPipeline**. That figure is end-to-end data production, *not* model forward time, and the baseline is EgoPipeline already distributed-optimised with Ray multi-GPU operators, persistent workers and asynchronous CPU stages: rewriting its serial 1-GPU execution as a scheduled 4-GPU worker pool already took 179.0 s down to 63.9 s per 270 frames, a **2.8×** speedup internal to the pipeline. The two numbers are different comparisons and do not multiply.
 
 ## 📊 What MINT is measured on
 
