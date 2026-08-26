@@ -1,6 +1,18 @@
 <div align="center">
 
-<img src="assets/readme/teaser.webp" width="100%" alt="第一视角画面叠加 MANO、同一段运动的世界坐标系相机与双手轨迹、以及重定向到 MuJoCo 中的 Wuji 灵巧手">
+<!--
+  完整宣传片（1 分 41 秒）—— 宣传片放在 README 最上面，位于封面视频墙之前。
+  源文件：宣传片工程里的 out/MINT_full_en.mp4（1920 × 1080，72 MB，特意不入库）。
+  GitHub 只为 github.com/user-attachments 链接渲染内嵌播放器，而这种链接只能通过
+  浏览器上传获得：在本仓库任意 issue / PR 的评论框里把 MP4 拖进去，复制生成的
+  https://github.com/user-attachments/assets/... 链接，单独一行粘贴到这段注释
+  下面。不要把 MP4 提交进仓库 —— 指向仓库文件的 <video> 标签会被 GitHub 的
+  markdown 过滤器整段删掉，页面上什么都不会显示。
+-->
+
+<img src="assets/readme/scale.webp" width="100%" alt="108 个 MINT 渲染片段同时播放，每格一个片段">
+
+<sub>来自三个已发布语料的 108 个 MINT 渲染片段同时播放。完整发布量为 1,021.514 小时 · 560,649 个 episode · 110,323,558 帧结构化监督。</sub>
 
 <h1>MINT：用可扩展的第一视角管线监督<br>训练世界坐标系相机与手部运动的统一模型</h1>
 
@@ -19,14 +31,6 @@ Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Y
 [English](README.md)
 
 </div>
-
-<!--
-  完整宣传片（1 分 41 秒）。GitHub 只为 github.com/user-attachments 链接渲染内嵌
-  播放器，而这种链接只能通过浏览器上传获得：在本仓库任意 issue / PR 的评论框里把
-  MP4 拖进去，复制生成的 https://github.com/user-attachments/assets/... 链接，
-  单独一行粘贴到这里。不要把 MP4 提交进仓库 —— 指向仓库文件的 <video> 标签会被
-  GitHub 的 markdown 过滤器整段删掉，页面上什么都不会显示。
--->
 
 <img src="assets/readme/world_space.webp" width="100%" alt="八宫格：第一视角、世界坐标系、MuJoCo 重定向三种空间下的设备真值与 MINT 预测对照">
 
@@ -209,15 +213,11 @@ Viewer 启动后会自动在默认浏览器打开 `http://127.0.0.1:8011`，然�
 
 ### 为什么用一个模型替掉整条链
 
-<img src="assets/readme/figure_execution.webp" width="100%" alt="多级管线与单次共享前向的执行开销对比">
+<img src="assets/readme/teaser.webp" width="100%" alt="单次前向输出的三宫格：第一视角 MANO 叠加、世界坐标系下的相机与双手轨迹、以及重定向到 MuJoCo 中的 Wuji 灵巧手">
 
-<div align="center"><sub>这张图讲的是<b>管线内部</b>的优化：把串行单卡执行改写成 4 卡调度的 worker 池后，270 帧的墙钟时间从 179.0 秒降到 63.9 秒，即 <b>2.8×</b>。上文那个 <b>5.0×</b> 的基线正是这个已优化版本 —— 两个数字是两种不同的对比，不能相乘。</sub></div>
+<div align="center"><sub>一次前向直接给出的东西，而串行链只能靠对各级输出做后处理才能拼出这三种空间：第一视角 MANO 叠加、世界坐标系下的相机与双手轨迹、以及 Wuji 灵巧手重定向。三格全是预测结果。</sub></div>
 
-串行链有一些靠工程优化消不掉的结构性代价：每一级都要把同一段视频重新编码一次；相机和手部只在后处理里才相遇；每一级的上限都被它前面那一级锁死；任何一个算子退化，整条记录都会退化。在完整流程口径下 —— 原始视频进、存储好的统一结构化状态出，输入与硬件完全一致 —— 统一模型达到 **EgoPipeline 有效数据产出吞吐的 5.0 倍**。这个数字算的是端到端数据生产，*不是*模型前向时间；而且作为基线的 EgoPipeline 本身已经做过分布式优化（Ray 多卡算子、常驻 worker、异步 CPU 阶段）。
-
-<img src="assets/readme/scale.webp" width="100%" alt="108 个 MINT 渲染片段同时播放，每格一个片段">
-
-<div align="center"><sub>来自三个已发布语料的 108 个 MINT 渲染片段同时播放。完整发布量为 1,021.514 小时 · 560,649 个 episode · 110,323,558 帧结构化监督。</sub></div>
+串行链有一些靠工程优化消不掉的结构性代价：每一级都要把同一段视频重新编码一次；相机和手部只在后处理里才相遇；每一级的上限都被它前面那一级锁死；任何一个算子退化，整条记录都会退化。在完整流程口径下 —— 原始视频进、存储好的统一结构化状态出，输入与硬件完全一致 —— 统一模型达到 **EgoPipeline 有效数据产出吞吐的 5.0 倍**。这个数字算的是端到端数据生产，*不是*模型前向时间；而且作为基线的 EgoPipeline 本身已经做过分布式优化（Ray 多卡算子、常驻 worker、异步 CPU 阶段）：把它的串行单卡执行改写成 4 卡调度的 worker 池，就已经把 270 帧的墙钟时间从 179.0 秒降到 63.9 秒，即管线内部的 **2.8×**。这两个数字是两种不同的对比，不能相乘。
 
 ## 📊 评测口径
 
