@@ -17,8 +17,9 @@ from flask import Flask, abort, jsonify, request, send_file
 
 from . import ckpts, diversity_analysis
 from .const import (CAM_MODES, CONTENTS, DEFAULT_CAM_MODE, DEFAULT_HAND_MODE,
-                    DEFAULT_PARAM_MODE, DEFAULT_UKF_PARAMS, HAND_MODES, LAYOUTS,
-                    MODEL_TRAIN_ROOT, MODES, PARAM_MODES, VIDEO_EXTS)
+                    DEFAULT_LAYOUT, DEFAULT_PARAM_MODE, DEFAULT_UKF_PARAMS,
+                    HAND_MODES, LAYOUTS, MODEL_TRAIN_ROOT, MODES, PARAM_MODES,
+                    VIDEO_EXTS)
 from .dataset_analysis import DatasetAnalysisManager
 
 WEB_DIR = Path(__file__).resolve().parent / "web"
@@ -581,7 +582,7 @@ def create_app(store) -> Flask:
         return jsonify(fps=(store.item_fps(eid) if reg else store.default_fps),
                        no_truth=(store.is_no_truth(eid) if reg else False),
                        modes=MODES, default_mode=store.default_mode,
-                       layouts=LAYOUTS, default_layout=LAYOUTS[0],
+                       layouts=LAYOUTS, default_layout=DEFAULT_LAYOUT,
                        contents=CONTENTS, default_content=CONTENTS[0],
                        cam_modes=CAM_MODES, default_cam_mode=DEFAULT_CAM_MODE,
                        full_max_frames=getattr(
@@ -654,7 +655,7 @@ def create_app(store) -> Flask:
     def api_progress2d(eid: int):
         # 前端按块轮询 2D 渲染进度：参数与 /video 一致（mode/layout/content/raw），后端按同一归一化取键。
         mode = request.args.get("mode", store.default_mode)
-        layout = request.args.get("layout", LAYOUTS[0])
+        layout = request.args.get("layout", DEFAULT_LAYOUT)
         content = request.args.get("content", CONTENTS[0])
         raw = bool(request.args.get("raw"))
         cam_mode = request.args.get("cam_mode", DEFAULT_CAM_MODE)
@@ -697,7 +698,7 @@ def create_app(store) -> Flask:
             request.args.get("fov", DEFAULT_PARAM_MODE) == "mean"))
 
     def _world_query_options() -> dict:
-        layout = request.args.get("layout", LAYOUTS[0])
+        layout = request.args.get("layout", DEFAULT_LAYOUT)
         coord_mode = request.args.get("coord_mode", "z_up")
         cam_mode = request.args.get("cam_mode", DEFAULT_CAM_MODE)
         try:
@@ -831,7 +832,7 @@ def create_app(store) -> Flask:
                 isinstance(source, str) for source in sources):
             abort(400, "至少选择一路导出画面")
         mode = body.get("mode", store.default_mode)
-        layout = body.get("layout", LAYOUTS[0])
+        layout = body.get("layout", DEFAULT_LAYOUT)
         content = body.get("content", CONTENTS[0])
         cam_mode = body.get("cam_mode", DEFAULT_CAM_MODE)
         try:
@@ -945,7 +946,7 @@ def create_app(store) -> Flask:
         mode = request.args.get("mode", store.default_mode)
         if mode not in MODES:
             abort(404, f"未知 mode: {mode}")
-        layout = request.args.get("layout", LAYOUTS[0])
+        layout = request.args.get("layout", DEFAULT_LAYOUT)
         if layout not in LAYOUTS:
             abort(404, f"未知 layout: {layout}")
         content = request.args.get("content", CONTENTS[0])
