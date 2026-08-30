@@ -15,21 +15,19 @@
 
 <img src="assets/readme/scale.webp" width="100%" alt="108 MINT renders playing at once, one tile per clip">
 
-<sub>108 MINT renders from the three released corpora, playing at once. The full release is 1,021.514 h · 560,649 episodes · 110,323,558 frames of structured supervision.</sub>
-
-<h1>MINT: Minting a Unified Model for World-Space Camera and Hand Motion<br>from Scalable Egocentric Pipeline Supervision</h1>
+<h2>MINT: Minting a Unified Model for World-Space Camera and Hand Motion<br>from Scalable Egocentric Pipeline Supervision</h2>
 
 Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Yizhou Wang<sup>1,3</sup> &nbsp;·&nbsp; Zhenjie Yang<sup>4</sup> &nbsp;·&nbsp; Jiahao Chen<sup>3,\*</sup> &nbsp;·&nbsp; Guanqi He<sup>2,3,\*</sup>
 
 <sub><sup>1</sup>ShanghaiTech University &nbsp;&nbsp;<sup>2</sup>Tsinghua University &nbsp;&nbsp;<sup>3</sup>Wuji Technology &nbsp;&nbsp;<sup>4</sup>The University of Hong Kong &nbsp;&nbsp;<sup>\*</sup>Corresponding authors</sub>
 
-[![Paper](https://img.shields.io/badge/Paper-ICRA_submission_under_review-b31b1b)](#-citation)
+<!-- TODO: paste the arXiv link into the badge below once it is live. -->
+[![arXiv](https://img.shields.io/badge/arXiv-coming_soon-b31b1b)]()
 [![Model](https://img.shields.io/badge/%F0%9F%A4%97_Model-mint__v1-ff9d00)](https://huggingface.co/ZZJAsher/mint_v1)
+[![Model](https://img.shields.io/badge/ModelScope_Model-mint__v1-624aff)](https://www.modelscope.cn/models/AsherZhu/mint_v1)
 [![Dataset](https://img.shields.io/badge/%F0%9F%A4%97_Dataset-1,021_hours-ff9d00)](https://huggingface.co/datasets/ZZJAsher/wuji_ego_mint)
-[![ModelScope](https://img.shields.io/badge/ModelScope-mint__v1-624aff)](https://www.modelscope.cn/models/AsherZhu/mint_v1)
+[![Dataset](https://img.shields.io/badge/ModelScope_Dataset-1,021_hours-624aff)](https://www.modelscope.cn/datasets/AsherZhu/wuji_ego_mint)
 [![License](https://img.shields.io/badge/License-MIT-3fa03f)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.10-3776ab?logo=python&logoColor=white)](environments/mint-inference.yml)
-[![Inference](https://img.shields.io/badge/Inference-24_GB_VRAM-76b900?logo=nvidia&logoColor=white)](#-quick-start-web-viewer)
 
 [中文说明](README_ZH.md)
 
@@ -37,7 +35,7 @@ Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Y
 
 <img src="assets/readme/world_space.webp" width="100%" alt="Eight panels: device ground truth beside MINT prediction in the ego view, in world space, and retargeted to the Wuji hand in MuJoCo">
 
-<div align="center"><sub>One monocular egocentric clip from <b>HOT3D</b>, which is held out completely. Left of each pair is device ground truth, right is MINT's prediction: ego-view MANO, world-space camera and two-hand trajectory, and the same trajectory retargeted to the Wuji hand in MuJoCo. Single forward pass, no per-sequence optimisation, no test-time tuning.</sub></div>
+<div align="center"><sub>One monocular egocentric clip from <b>HOT3D</b> — sample results. Left of each pair is device ground truth, right is MINT's prediction: ego-view MANO, world-space camera and two-hand trajectory, and the same trajectory retargeted to the Wuji hand in MuJoCo. Single forward pass, no per-sequence optimisation, no test-time tuning.</sub></div>
 
 ---
 
@@ -47,7 +45,7 @@ Activity understanding, robot imitation and AR all want the same thing: **where 
 
 - **One unified model, not a five-stage chain.** A shared spatiotemporal representation feeds a camera-extrinsics head, an independent field-of-view head, a camera-frame MANO head and a per-frame hand-presence head; explicit differentiable rigid composition turns them into world-space hand motion. No depth map, no point cloud, no dense 3D intermediate at inference.
 - **Structured pipeline amortization.** The multi-stage pipeline is kept — offline, as a supervision generator — and one model is trained on its final structured state. Not logit distillation: the student learns the structured camera–hand state of an entire non-end-to-end system.
-- **Open end to end.** Model weights, training and inference code, the EgoPipeline labeling system, and a filtered **1,021-hour** structured egocentric dataset — with the release's own limits written down rather than left out.
+- **Open end to end.** Model weights, training and inference code, the EgoPipeline labeling system, and a filtered **1,021-hour** structured egocentric dataset.
 
 <img src="assets/readme/pipeline_vs_mint.webp" width="100%" alt="Same frames through the multi-stage pipeline and through MINT: the pipeline places both hands away from the real hands, MINT keeps them on the hands">
 
@@ -70,6 +68,8 @@ Activity understanding, robot imitation and AR all want the same thing: **where 
   - [Where the supervision comes from](#where-the-supervision-comes-from)
   - [Why one model instead of the chain](#why-one-model-instead-of-the-chain)
 - [📊 What MINT is measured on](#-what-mint-is-measured-on)
+  - [Camera-frame bimanual reconstruction](#camera-frame-bimanual-reconstruction)
+  - [Protocol](#protocol)
 - [📦 What is included](#-what-is-included)
 - [🏋️ Training and optional pipeline reconstruction](#️-training-and-optional-pipeline-reconstruction)
 - [🗂️ Public Ego pretraining data](#️-public-ego-pretraining-data)
@@ -103,7 +103,7 @@ Activity understanding, robot imitation and AR all want the same thing: **where 
 | ✅ | Benchmark implementation and CLI, integrated into the Viewer | `eval/model_effect/benchmark/` |
 | ✅ | EgoPipeline orchestration, cleaning and LeRobot export reference | `ray_pipeline/` |
 | ✅ | Wuji hand URDF/MJCF/STL and retargeting | `eval/simulate/wuji-retargeting/` |
-| ⏳ | Zero-shot HOT3D / ARCTIC result tables | published with the paper; **no numbers are quoted here before then** |
+| ✅ | Zero-shot HOT3D / ARCTIC result table (paper Table 1) | [Camera-frame bimanual reconstruction](#camera-frame-bimanual-reconstruction) |
 | ⏳ | Scale-corrected camera trajectories for the released dataset | see [Known limits](#️-known-limits) |
 | ❌ | License-restricted pipeline adaptations (adapted HaWoR source, weights, MANO) | cannot be redistributed; see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) |
 
@@ -175,9 +175,9 @@ All visualization operations live in the Viewer panel — there is no separate c
 
 ## 🧠 How MINT works
 
-<img src="assets/readme/figure_system.webp" width="100%" alt="System overview: data sources and filtering, the unified network with its four heads and rigid composition, and world-space outputs">
+<img src="assets/readme/figure_teaser.webp" width="100%" alt="Overview: large-scale egocentric video on the left, MINT and dataset diversity in the middle, zero-shot world-space outputs on the right">
 
-<div align="center"><sub>Top band: how the supervision is produced and filtered. Middle: the unified network. Bottom: what one forward pass returns. In the source donut, only the public <b>1,021.514 h</b> of pipeline pseudo-labels is released — the human-annotated hours beside it are the Stage 2 calibration set and are not part of the release.</sub></div>
+<div align="center"><sub>Left: the released supervision — <b>1,021 h</b>, <b>560 K</b> episodes of egocentric video, and how its diversity compares with EgoDex, Ego4D and EPIC-KITCHENS. Right: one unseen video through MINT in a single pass — world-space camera and hand trajectory, MANO hands, and the same motion retargeted to a robot hand.</sub></div>
 
 One shared encode per frame, four factorized heads, then explicit rigid composition into world space — so a world-space error updates the camera branch and the hand branch together.
 
@@ -195,9 +195,11 @@ One shared encode per frame, four factorized heads, then explicit rigid composit
 | **Head 04** | per-frame hand presence, logits L / R, patch cross-attention |
 | **Composition** | `x_c = R x_w + t`, `p_w = Rᵀ(p_c − t)`, `Q_w = Rᵀ Q_c` — explicit and differentiable |
 | **At inference** | no depth map, no point cloud, no dense 3D intermediate |
-| **Training** | Stage 1 pretrain on 1,021 h of pipeline supervision → Stage 2 calibrate on a small high-precision camera–hand set |
+| **Training** | Stage 1 pretrain on 1,021 h of pipeline supervision → Stage 2 correct the camera trajectory on a small high-precision trajectory set, with the geometric encoder and the hand, presence and field-of-view modules frozen |
 
-<img src="assets/readme/figure_architecture.webp" width="100%" alt="Model architecture: shared spatiotemporal tokens feeding the camera, field-of-view, MANO and presence heads">
+<img src="assets/readme/figure_egopipeline.webp" width="100%" alt="EgoPipeline stages: hand detection and frame filtering, camera pose estimation through GeoCalib, MoGe-2 and MegaSaM, HaWoR hand reconstruction, then outlier rejection, interpolation, temporal smoothing and the world-coordinate transform">
+
+<div align="center"><sub><b>EgoPipeline</b>, the offline supervision generator. Top: pre-filtering and the per-stage estimators. Bottom: the post-processing that turns raw stage output into usable structured state. Stage by stage in the table below.</sub></div>
 
 ### Where the supervision comes from
 
@@ -224,7 +226,41 @@ A staged chain has structural costs that better engineering does not remove: eac
 
 ## 📊 What MINT is measured on
 
-**No accuracy numbers appear in this README.** The zero-shot tables are published with the paper; until then, what we can state precisely is the protocol.
+### Camera-frame bimanual reconstruction
+
+Table 1 of the paper, reproduced verbatim. Every row is scored under the **coverage-aware protocol**: a hand a method declines to report is not skipped, it is charged the error of a canonical MANO placeholder — so refusing to predict is never cheaper than predicting badly. **MINT is zero-shot on both benchmarks.** ViDiHand (marked `*`) is trained on most of both, so it is a **reference row, not a comparable one**; bold marks the best value among the comparable rows, excluding that reference row. `MINT + UKF` applies the inference-time filter and changes nothing else.
+
+| | Detection | | | 3D pose | | Orient. & pos. | | Temporal |
+| :-- | --: | --: | --: | --: | --: | --: | --: | --: |
+| **Method** | FAcc ↑ | Recall ↑ | F1 ↑ | MPJPE-p ↓<br><sub>mm</sub> | PA-MPJPE-p ↓<br><sub>mm</sub> | GO-p ↓<br><sub>deg</sub> | CT-p ↓<br><sub>m</sub> | Jitter ↓<br><sub>mm/frame²</sub> |
+| ***ARCTIC*** | | | | | | | | |
+| InterWild [16] | 0.878 | 0.943 | 0.959 | 30.82 | 15.95 | 25.39 | 0.097 | 46.58 |
+| HaMeR [18] | 0.875 | 0.943 | 0.957 | 29.20 | 14.60 | 24.91 | 0.095 | 18.28 |
+| Hamba [5] | 0.833 | 0.912 | 0.941 | 31.23 | 17.17 | 27.82 | 0.110 | 15.36 |
+| WildHands [20] | 0.879 | 0.946 | 0.960 | 25.70 | 13.94 | 22.32 | **0.058** | 12.97 |
+| OmniHands [15] | 0.866 | 0.949 | 0.954 | 29.67 | 14.20 | 24.58 | 0.087 | 45.31 |
+| WiLoR [19] | **0.919** | 0.951 | 0.974 | **22.01** | **11.87** | **17.36** | 0.075 | 24.09 |
+| Dyn-HaMR [37] | 0.842 | 0.918 | 0.951 | 27.90 | 17.02 | 25.95 | 0.121 | 12.84 |
+| HaWoR [39] | 0.700 | 0.817 | 0.895 | 45.36 | 26.38 | 43.33 | 0.149 | 19.79 |
+| ViDiHand [33]\* | *0.997* | *0.999* | *0.999* | *21.67* | *9.82* | *14.64* | *0.047* | *3.18* |
+| MINT | 0.916 | **0.957** | **0.978** | 51.03 | 27.71 | 24.19 | 0.140 | 12.26 |
+| MINT + UKF | 0.916 | **0.957** | **0.978** | 51.09 | 27.70 | 24.22 | 0.140 | **2.54** |
+| ***HOT3D*** | | | | | | | | |
+| InterWild [16] | 0.669 | 0.881 | 0.868 | 77.17 | 24.81 | 58.50 | 0.213 | 101.16 |
+| HaMeR [18] | 0.692 | 0.904 | 0.883 | 68.31 | 21.46 | 49.64 | 0.102 | 23.63 |
+| Hamba [5] | 0.632 | 0.828 | 0.853 | 71.73 | 29.62 | 56.53 | 0.128 | 18.51 |
+| WildHands [20] | 0.655 | 0.863 | 0.844 | 52.79 | 28.95 | 53.93 | 0.157 | 22.89 |
+| OmniHands [15] | 0.649 | 0.895 | 0.868 | 63.28 | 22.68 | 49.12 | 0.133 | 69.51 |
+| WiLoR [19] | 0.827 | 0.897 | 0.937 | 30.97 | 19.98 | 25.75 | 0.098 | 17.98 |
+| Dyn-HaMR [37] | 0.614 | 0.811 | 0.802 | 74.21 | 38.20 | 43.85 | 0.571 | 44.94 |
+| HaWoR [39] | 0.348 | 0.499 | 0.654 | 71.40 | 66.03 | 79.35 | 0.262 | 23.87 |
+| ViDiHand [33]\* | *0.948* | *0.974* | *0.983* | *21.51* | *11.38* | *15.83* | *0.040* | *3.74* |
+| MINT | **0.940** | **0.977** | **0.950** | **23.61** | 10.70 | 16.78 | **0.073** | 11.52 |
+| MINT + UKF | **0.940** | **0.977** | **0.950** | 23.62 | **10.69** | **16.77** | **0.073** | **2.39** |
+
+Read this table together with the second entry in [Known limits](#️-known-limits). On **HOT3D**, zero-shot MINT is the best comparable row on detection, MPJPE-p, PA-MPJPE-p, GO-p and CT-p, and `MINT + UKF` has the lowest jitter in the table including the reference row. On **ARCTIC**, its camera-frame joint error is clearly behind the dedicated single-task reconstructors. Overall that places the released checkpoint **close to the state of the art on camera-frame hands rather than at it**, and the reason is structural: this checkpoint's hand branch is trained only on coarse EgoPipeline pseudo-labels and was never fine-tuned on high-precision camera-frame hand data, so it approaches its teacher's accuracy without exceeding it. We report both benchmarks rather than the favourable one.
+
+### Protocol
 
 - **Held out completely.** HOT3D and ARCTIC images, pipeline labels and ground truth are excluded from training, high-precision calibration, hyper-parameter and loss-weight selection, and checkpoint selection. No test-time tuning. Only models satisfying this condition may enter the zero-shot tables.
 - **Split hygiene.** All official splits are made by original video ID before clipping, with additional participant-level separation wherever participant IDs exist.
@@ -323,6 +359,7 @@ Dataset access does not itself grant redistribution rights. The publisher must s
 We would rather you read these here than discover them later:
 
 - **EgoPipeline output is pseudo-label, not ground truth.** Every accuracy claim about MINT is measured on held-out real ground truth instead.
+- **Camera-frame hand accuracy is bounded by the teacher — close to the state of the art, not at it.** The hand branch of the released checkpoint is supervised entirely by the coarse EgoPipeline pseudo-labels. Stage 2 corrects only the camera trajectory and keeps the hand, presence and field-of-view modules frozen, so no high-precision camera-frame hand data ever fine-tunes them. Camera-frame hand reconstruction therefore approaches the accuracy of the pipeline output it learned from without exceeding it: best among the comparable rows on HOT3D, but clearly behind the dedicated single-task reconstructors on ARCTIC's close-range bimanual manipulation ([Table 1](#camera-frame-bimanual-reconstruction)). Fine-tuning the hand branch on high-precision camera-frame hand data is the obvious remedy and is not part of this release.
 - **The released camera trajectories still show scale enlargement** (see the warning above). Use them for pretraining, not for metric evaluation.
 - **32-frame clip training does not by itself prove long-video consistency.** Long-sequence behaviour is reported separately, not extrapolated from clip-level accuracy.
 - **Presence labels inherit a fixed detector threshold.** Shared temporal features let the student correct isolated teacher misses and false positives, and that is audited against blind-reviewed presence rather than against the pseudo-labels it was trained on.
