@@ -61,7 +61,8 @@ let state = { eid:0, fps:30, mode:'mesh_skel', nframes:1,
               gtBetas:'per_frame', predBetas:'per_frame', predFov:'per_frame',  // 手形/内参 每帧 vs 整段平均
               gt:null, pred:null, metrics:null, metricsError:null, nums:null,
                                                         // nums=逐帧数值(每块下方面板)
-              layout:'overlay',                      // 'overlay'(默认) | 'side'
+              layout:'side',                         // 生效布局：'side'(默认，GT/PRED 左右并排) | 'overlay'(同画面叠加)
+              layoutPref:'side',                     // 用户点选的布局偏好；裸视频被迫 overlay 时不改它
               order:DEFAULT_ORDER.slice(),           // 模块显示顺序（右侧调节栏拖拽可改）
               hidden:new Set(['mujoco_3d','wuji_retarget_3d','batch','bench','logdiff']),
                                                         // 仿真/重定向与工具面板均按需打开
@@ -214,10 +215,10 @@ let ckptCur = '';
 let curDatasetRel = null;     // 当前浏览目录若是 lerobot 数据集则记其**绝对**路径，否则 null（普通目录=视频项）
 let _dsScanToken = 0;         // 数据集枚举轮询代次：每次进目录 +1，失效上一目录仍在跑的轮询（防旧进度回填）
 
-// 按当前加载/选择项切换「模式相关」UI：无真值(裸视频)隐藏 布局/说明/仅看原始，固定 overlay；有真值全开。
+// 按当前加载/选择项切换「模式相关」UI：无真值(裸视频)隐藏 布局/说明/仅看原始，固定 overlay；有真值全开并恢复偏好。
 function applyModeUI(nt){
   state.no_truth = nt;
-  if(nt) state.layout = 'overlay';
+  state.layout = nt ? 'overlay' : state.layoutPref;
   const rawButton=$('#loadRawBtn'); if(rawButton) rawButton.style.display=nt?'none':'';
   const mw = $('#metricsWrap'); if(mw && nt) mw.style.display = 'none';   // 无真值无 loss；有真值时 loadEpisode 里按需显隐
 }
@@ -4897,6 +4898,7 @@ function wireLayoutControls(root){
   root.querySelectorAll('#layoutSeg button').forEach(button=>button.onclick=()=>{
     if(state.layout===button.dataset.layout) return;
     state.layout=button.dataset.layout;
+    state.layoutPref=state.layout;
     console.log('[btn] GT/PRED 对照布局 → '+state.layout);
     if(state.loaded) buildPanels(true);
   });
