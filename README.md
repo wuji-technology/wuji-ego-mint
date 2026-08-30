@@ -49,7 +49,7 @@ Activity understanding, robot imitation and AR all want the same thing: **where 
 
 <img src="assets/readme/pipeline_vs_mint.webp" width="100%" alt="Same frames through the multi-stage pipeline and through MINT: the pipeline places both hands away from the real hands, MINT keeps them on the hands">
 
-<div align="center"><sub>Same frames, same overlay renderer. Left: the input. Middle: the conventional five-stage route, whose output is <b>pseudo-label, not ground truth</b>. Right: MINT, one forward pass. A qualitative example, selected by a measured overlay gap rather than by hand — see <a href="assets/readme/SOURCES.md">assets/readme/SOURCES.md</a>. Accuracy claims live in <a href="#-what-mint-is-measured-on">Benchmark</a>, never in a picture.</sub></div>
+<div align="center"><sub>Same frames, same overlay renderer. Left: the input. Middle: the conventional five-stage route, whose output is <b>pseudo-label, not ground truth</b>. Right: MINT, one forward pass. A qualitative example, selected by a measured overlay gap rather than by hand — see <a href="assets/readme/SOURCES.md">assets/readme/SOURCES.md</a>.</sub></div>
 
 ---
 
@@ -104,7 +104,7 @@ Activity understanding, robot imitation and AR all want the same thing: **where 
 | ✅ | EgoPipeline orchestration, cleaning and LeRobot export reference | `ray_pipeline/` |
 | ✅ | Wuji hand URDF/MJCF/STL and retargeting | `eval/simulate/wuji-retargeting/` |
 | ✅ | Zero-shot HOT3D / ARCTIC result table (paper Table 1) | [Camera-frame bimanual reconstruction](#camera-frame-bimanual-reconstruction) |
-| ⏳ | Scale-corrected camera trajectories — the released dataset's trajectories are scale-enlarged | Corrected version not released yet; the current ones are usable for pretraining, not for metric evaluation. Cause in [Public Ego pretraining data](#️-public-ego-pretraining-data) |
+| ⏳ | Scale-corrected camera trajectories — the released dataset's trajectories are scale-enlarged | The current ones are usable for pretraining, not for metric evaluation. Cause in [Public Ego pretraining data](#️-public-ego-pretraining-data) |
 | ❌ | License-restricted pipeline adaptations (adapted HaWoR source, weights, MANO) | cannot be redistributed; see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) |
 
 ## 🚀 Quick Start: Web Viewer
@@ -157,8 +157,6 @@ To reconstruct the Ego data-production pipeline, download the required weights u
 | HaWoR right-hand MANO | `third_party/HaWoR/_DATA/data/mano/MANO_RIGHT.pkl` |
 | HaWoR left-hand MANO | `third_party/HaWoR/_DATA/data_left/mano_left/MANO_LEFT.pkl` |
 
-Benchmark data has no required in-repository location. At runtime, use `--data-root /path/to/benchmark-data` to select the downloaded and organized HOT3D, ARCTIC, or other benchmark datasets.
-
 ### Using the Viewer
 
 The Viewer automatically opens `http://127.0.0.1:8011` in the default browser. Then:
@@ -170,6 +168,8 @@ The Viewer automatically opens `http://127.0.0.1:8011` in the default browser. T
 5. Inspect the synchronized GT/Pred 2D view, fixed-world and camera-frame 3D panels, per-frame values, losses, exports, and optional benchmark tools.
 
 ![MINT Web Viewer after loading the model and running inference](data/samples/mint-web-viewer.png)
+
+**Testing your own video** needs no configuration change and no command line: browse to the video in the input-directory picker at the bottom right of the Viewer and click it. Supported formats are `.mp4`, `.mov`, `.avi`, `.mkv` and `.webm`. A plain video carries no ground truth, so the Viewer runs in prediction-only mode — GT panels, the GT/Pred side-by-side layout and the loss readout are hidden, and everything shown is prediction.
 
 All visualization operations live in the Viewer panel — there is no separate command-line visualization step. See [Installation](docs/installation.md) for installation, CUDA, MANO, and offline deployment details.
 
@@ -222,7 +222,24 @@ Its output is **pseudo-label, not ground truth** — that distinction is load-be
 
 <div align="center"><sub>What a single forward pass returns, in the three spaces the staged chain only reaches by post-processing its own stage outputs: ego-view MANO, world-space camera and two-hand trajectory, and the Wuji-hand retarget. All three panels are prediction.</sub></div>
 
-A staged chain has structural costs that better engineering does not remove: each stage re-encodes the same video, camera and hands meet only in post-processing, every stage is capped by the one before it, and one operator regressing regresses the whole record. Under whole-process accounting — raw input video in, stored unified structured state out, identical inputs and hardware — the unified model reaches **5.0× the effective data-production throughput of EgoPipeline**. That figure is end-to-end data production, *not* model forward time, and the baseline is EgoPipeline already distributed-optimised with Ray multi-GPU operators, persistent workers and asynchronous CPU stages: rewriting its serial 1-GPU execution as a scheduled 4-GPU worker pool already took 179.0 s down to 63.9 s per 270 frames, a **2.8×** speedup internal to the pipeline. The two numbers are different comparisons and do not multiply.
+A staged chain has structural costs that better engineering does not remove: each stage re-encodes the same video, camera and hands meet only in post-processing, every stage is capped by the one before it, and one operator regressing regresses the whole record.
+
+Inference throughput at 512 × 384 and 30 fps under identical conditions. Time is the **marginal cost per frame in steady state**. On one GPU the comparison is against **HaWoR**, the hand-reconstruction branch of EgoPipeline; on four GPUs it is against the full **EgoPipeline** cascade. VITRA is included as a common external reference, and the speedup column is measured against it.
+
+| Method | Time ↓<br><sub>ms/frame</sub> | fps ↑ | Speedup ↑<br><sub>vs VITRA</sub> |
+| :-- | --: | --: | --: |
+| ***One GPU*** | | | |
+| VITRA | 1260.0 | 0.8 | — |
+| HaWoR | 105.1 | 9.5 | 12.0× |
+| MINT | **72.4** | **13.8** | **17.4×** |
+| ***Four GPUs*** | | | |
+| VITRA | 283.3 | 3.5 | — |
+| EgoPipeline | 83.4 | 12.0 | 3.4× |
+| MINT | **22.7** | **44.1** | **12.5×** |
+
+Measured against the thing MINT actually replaces rather than against the external reference: **1.45×** HaWoR on one GPU (105.1 → 72.4 ms/frame) and **3.7×** the full EgoPipeline cascade on four GPUs (83.4 → 22.7 ms/frame).
+
+Separately, the EgoPipeline baseline is itself already distributed-optimised — Ray multi-GPU operators, persistent workers, asynchronous CPU stages: rewriting its serial 1-GPU execution as a scheduled 4-GPU worker pool took 179.0 s down to 63.9 s per 270 frames, a **2.8×** speedup internal to the pipeline. That is whole-clip wall-clock including decode and write-out, not the steady-state marginal cost tabulated above; the two are different accountings and do not multiply.
 
 ## 📊 What MINT is measured on
 

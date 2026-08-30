@@ -46,7 +46,7 @@ Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Y
 
 <img src="assets/readme/pipeline_vs_mint.webp" width="100%" alt="同一批帧分别经过多级管线和 MINT：管线把两只手都放错了位置，MINT 保持贴合">
 
-<div align="center"><sub>同一批帧，同一套叠加渲染。左：输入。中：传统五级路线，其输出是<b>伪标签，不是真值</b>。右：MINT，一次前向。这是定性示例，片段由可度量的叠加偏差排序挑出，而非人工挑选，依据见 <a href="assets/readme/SOURCES.md">assets/readme/SOURCES.md</a>。精度结论只在 <a href="#-评测口径">评测口径</a> 一节给出，绝不用图片代替。</sub></div>
+<div align="center"><sub>同一批帧，同一套叠加渲染。左：输入。中：传统五级路线，其输出是<b>伪标签，不是真值</b>。右：MINT，一次前向。这是定性示例，片段由可度量的叠加偏差排序挑出，而非人工挑选，依据见 <a href="assets/readme/SOURCES.md">assets/readme/SOURCES.md</a>。</sub></div>
 
 ---
 
@@ -101,7 +101,7 @@ Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Y
 | ✅ | EgoPipeline 调度、清理与 LeRobot 导出参考实现 | `ray_pipeline/` |
 | ✅ | Wuji 灵巧手 URDF/MJCF/STL 与重定向 | `eval/simulate/wuji-retargeting/` |
 | ✅ | HOT3D / ARCTIC 零样本结果表（论文 Table 1） | [相机系下的双手重建](#相机系下的双手重建) |
-| ⏳ | 相机轨迹的尺度校正版本 —— 已发布数据集中的相机轨迹存在尺度放大 | 校正后的版本尚未发布；现有轨迹可用于预训练，不可用于米制评测，成因见[公开 Ego 预训练数据](#️-公开-ego-预训练数据) |
+| ⏳ | 相机轨迹的尺度校正版本 —— 已发布数据集中的相机轨迹存在尺度放大 | 现有轨迹可用于预训练，不可用于米制评测，成因见[公开 Ego 预训练数据](#️-公开-ego-预训练数据) |
 | ❌ | 受许可证限制的管线适配（改动过的 HaWoR 源码、权重、MANO） | 不能再分发，见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) |
 
 ## 🚀 快速开始：Web Viewer
@@ -154,8 +154,6 @@ Quick Start 使用的模型与资产请按下表放置。`scripts/download_asset
 | HaWoR 右手 MANO | `third_party/HaWoR/_DATA/data/mano/MANO_RIGHT.pkl` |
 | HaWoR 左手 MANO | `third_party/HaWoR/_DATA/data_left/mano_left/MANO_LEFT.pkl` |
 
-Benchmark 数据没有强制的仓库内目录，可在运行时通过 `--data-root /path/to/benchmark-data` 指向下载并整理后的 HOT3D、ARCTIC 等数据集。
-
 ### 使用 Viewer
 
 Viewer 启动后会自动在默认浏览器打开 `http://127.0.0.1:8011`，然后依次操作：
@@ -167,6 +165,8 @@ Viewer 启动后会自动在默认浏览器打开 `http://127.0.0.1:8011`，然�
 5. 查看同步的 GT/Pred 2D、固定世界和当前相机 3D、逐帧数值、loss、导出及可选 benchmark 工具。
 
 ![MINT Web Viewer 加载模型并完成推理后的界面](data/samples/mint-web-viewer.png)
+
+**要测试自己的视频**，不需要改配置、也不需要走命令行：在 Viewer 右下方的输入目录里浏览到视频所在路径，点击选中即可。支持的格式为 `.mp4`、`.mov`、`.avi`、`.mkv`、`.webm`。裸视频没有真值，Viewer 会进入纯预测模式 —— GT 面板、GT/Pred 并排布局与 loss 读数都会隐藏，画面上的全部内容都是预测结果。
 
 所有可视化操作都在 Viewer 面板中完成，不需要额外的命令行可视化步骤。安装、CUDA、MANO 与离线部署细节见 [安装指南](docs/installation.md)。
 
@@ -219,7 +219,24 @@ Viewer 启动后会自动在默认浏览器打开 `http://127.0.0.1:8011`，然�
 
 <div align="center"><sub>一次前向直接给出的东西，而串行链只能靠对各级输出做后处理才能拼出这三种空间：第一视角 MANO 叠加、世界坐标系下的相机与双手轨迹、以及 Wuji 灵巧手重定向。三格全是预测结果。</sub></div>
 
-串行链有一些靠工程优化消不掉的结构性代价：每一级都要把同一段视频重新编码一次；相机和手部只在后处理里才相遇；每一级的上限都被它前面那一级锁死；任何一个算子退化，整条记录都会退化。在完整流程口径下 —— 原始视频进、存储好的统一结构化状态出，输入与硬件完全一致 —— 统一模型达到 **EgoPipeline 有效数据产出吞吐的 5.0 倍**。这个数字算的是端到端数据生产，*不是*模型前向时间；而且作为基线的 EgoPipeline 本身已经做过分布式优化（Ray 多卡算子、常驻 worker、异步 CPU 阶段）：把它的串行单卡执行改写成 4 卡调度的 worker 池，就已经把 270 帧的墙钟时间从 179.0 秒降到 63.9 秒，即管线内部的 **2.8×**。这两个数字是两种不同的对比，不能相乘。
+串行链有一些靠工程优化消不掉的结构性代价：每一级都要把同一段视频重新编码一次；相机和手部只在后处理里才相遇；每一级的上限都被它前面那一级锁死；任何一个算子退化，整条记录都会退化。
+
+推理吞吐，512 × 384、30 fps，条件完全一致。时间为**稳态下的每帧边际成本**。单卡对比的是 **HaWoR**，即 EgoPipeline 的手部重建分支；四卡对比的是完整的 **EgoPipeline** 串行链。VITRA 作为共同的外部参考列出，加速比一列即以它为基准。
+
+| 方法 | 时间 ↓<br><sub>ms/帧</sub> | fps ↑ | 加速比 ↑<br><sub>相对 VITRA</sub> |
+| :-- | --: | --: | --: |
+| ***单卡*** | | | |
+| VITRA | 1260.0 | 0.8 | — |
+| HaWoR | 105.1 | 9.5 | 12.0× |
+| MINT | **72.4** | **13.8** | **17.4×** |
+| ***四卡*** | | | |
+| VITRA | 283.3 | 3.5 | — |
+| EgoPipeline | 83.4 | 12.0 | 3.4× |
+| MINT | **22.7** | **44.1** | **12.5×** |
+
+换成与 MINT 真正替代的对象相比，而不是与外部参考相比：单卡下是 HaWoR 的 **1.45 倍**（105.1 → 72.4 ms/帧），四卡下是完整 EgoPipeline 串行链的 **3.7 倍**（83.4 → 22.7 ms/帧）。
+
+另外，作为基线的 EgoPipeline 本身已经做过分布式优化 —— Ray 多卡算子、常驻 worker、异步 CPU 阶段：把它的串行单卡执行改写成 4 卡调度的 worker 池，就已经把 270 帧的墙钟时间从 179.0 秒降到 63.9 秒，即管线内部的 **2.8×**。那是含解码与落盘的整段墙钟时间，与上表的稳态边际成本不是同一口径；两个数字是两种不同的对比，不能相乘。
 
 ## 📊 评测口径
 
