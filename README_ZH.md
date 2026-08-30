@@ -12,21 +12,19 @@
 
 <img src="assets/readme/scale.webp" width="100%" alt="108 个 MINT 渲染片段同时播放，每格一个片段">
 
-<sub>来自三个已发布语料的 108 个 MINT 渲染片段同时播放。完整发布量为 1,021.514 小时 · 560,649 个 episode · 110,323,558 帧结构化监督。</sub>
-
-<h1>MINT：用可扩展的第一视角管线监督<br>训练世界坐标系相机与手部运动的统一模型</h1>
+<h2>MINT：用可扩展的第一视角管线监督<br>训练世界坐标系相机与手部运动的统一模型</h2>
 
 Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Yizhou Wang<sup>1,3</sup> &nbsp;·&nbsp; Zhenjie Yang<sup>4</sup> &nbsp;·&nbsp; Jiahao Chen<sup>3,\*</sup> &nbsp;·&nbsp; Guanqi He<sup>2,3,\*</sup>
 
-<sub><sup>1</sup>上海科技大学 &nbsp;&nbsp;<sup>2</sup>清华大学 &nbsp;&nbsp;<sup>3</sup>Wuji Technology &nbsp;&nbsp;<sup>4</sup>香港大学 &nbsp;&nbsp;<sup>\*</sup>通讯作者</sub>
+<sub><sup>1</sup>上海科技大学 &nbsp;&nbsp;<sup>2</sup>清华大学 &nbsp;&nbsp;<sup>3</sup>舞肌科技 &nbsp;&nbsp;<sup>4</sup>香港大学 &nbsp;&nbsp;<sup>\*</sup>通讯作者</sub>
 
-[![论文](https://img.shields.io/badge/Paper-ICRA_submission_under_review-b31b1b)](#-引用)
+<!-- TODO：arXiv 链接上线后填进下面这个 badge。 -->
+[![arXiv](https://img.shields.io/badge/arXiv-coming_soon-b31b1b)]()
 [![模型](https://img.shields.io/badge/%F0%9F%A4%97_Model-mint__v1-ff9d00)](https://huggingface.co/ZZJAsher/mint_v1)
+[![模型](https://img.shields.io/badge/ModelScope_Model-mint__v1-624aff)](https://www.modelscope.cn/models/AsherZhu/mint_v1)
 [![数据](https://img.shields.io/badge/%F0%9F%A4%97_Dataset-1,021_hours-ff9d00)](https://huggingface.co/datasets/ZZJAsher/wuji_ego_mint)
-[![ModelScope](https://img.shields.io/badge/ModelScope-mint__v1-624aff)](https://www.modelscope.cn/models/AsherZhu/mint_v1)
+[![数据](https://img.shields.io/badge/ModelScope_Dataset-1,021_hours-624aff)](https://www.modelscope.cn/datasets/AsherZhu/wuji_ego_mint)
 [![许可证](https://img.shields.io/badge/License-MIT-3fa03f)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.10-3776ab?logo=python&logoColor=white)](environments/mint-inference.yml)
-[![推理](https://img.shields.io/badge/Inference-24_GB_VRAM-76b900?logo=nvidia&logoColor=white)](#-快速开始web-viewer)
 
 [English](README.md)
 
@@ -34,7 +32,7 @@ Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Y
 
 <img src="assets/readme/world_space.webp" width="100%" alt="八宫格：第一视角、世界坐标系、MuJoCo 重定向三种空间下的设备真值与 MINT 预测对照">
 
-<div align="center"><sub>一段来自 <b>HOT3D</b> 的单目第一视角视频，该数据集完全留出。每一对里左侧是设备采集的真值，右侧是 MINT 的预测：第一视角 MANO 叠加、世界坐标系下的相机与双手轨迹、以及重定向到 MuJoCo 中的 Wuji 灵巧手。单次前向，无逐序列优化，无测试时调参。</sub></div>
+<div align="center"><sub>一段来自 <b>HOT3D</b> 的单目第一视角视频，样本效果。每一对里左侧是设备采集的真值，右侧是 MINT 的预测：第一视角 MANO 叠加、世界坐标系下的相机与双手轨迹、以及重定向到 MuJoCo 中的 Wuji 灵巧手。单次前向，无逐序列优化，无测试时调参。</sub></div>
 
 ---
 
@@ -44,7 +42,7 @@ Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Y
 
 - **一个统一模型，而不是五级串行链。** 共享的时空表征同时驱动相机外参头、独立视场角头、相机坐标系 MANO 头和逐帧手部存在性头，再由显式可微的刚体组合得到世界坐标系手部运动。推理时不出深度图、不出点云、不需要任何稠密 3D 中间结果。
 - **结构化管线摊销（structured pipeline amortization）。** 多级管线保留下来 —— 但放到线下，只作为监督信号的生成器 —— 然后用一个模型去学它最终那份结构化状态。这不是 logit 蒸馏：学生学的是一整套非端到端系统输出的结构化相机–手部状态。
-- **端到端开源。** 模型权重、训练与推理代码、EgoPipeline 标注系统，以及经过严格过滤的 **1,021 小时**结构化第一视角数据集 —— 并且把这份发布自身的局限也写清楚，而不是藏起来。
+- **端到端开源。** 模型权重、训练与推理代码、EgoPipeline 标注系统，以及经过严格过滤的 **1,021 小时**结构化第一视角数据集。
 
 <img src="assets/readme/pipeline_vs_mint.webp" width="100%" alt="同一批帧分别经过多级管线和 MINT：管线把两只手都放错了位置，MINT 保持贴合">
 
@@ -67,6 +65,8 @@ Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Y
   - [监督信号从哪里来](#监督信号从哪里来)
   - [为什么用一个模型替掉整条链](#为什么用一个模型替掉整条链)
 - [📊 评测口径](#-评测口径)
+  - [相机系下的双手重建](#相机系下的双手重建)
+  - [评测协议](#评测协议)
 - [📦 功能范围](#-功能范围)
 - [🏋️ 模型训练与可选管线复现](#️-模型训练与可选管线复现)
 - [🗂️ 公开 Ego 预训练数据](#️-公开-ego-预训练数据)
@@ -100,7 +100,7 @@ Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Y
 | ✅ | Benchmark 实现与 CLI，已接入 Viewer | `eval/model_effect/benchmark/` |
 | ✅ | EgoPipeline 调度、清理与 LeRobot 导出参考实现 | `ray_pipeline/` |
 | ✅ | Wuji 灵巧手 URDF/MJCF/STL 与重定向 | `eval/simulate/wuji-retargeting/` |
-| ⏳ | HOT3D / ARCTIC 零样本结果表 | 随论文一起公布；**在那之前本文不引用任何精度数字** |
+| ✅ | HOT3D / ARCTIC 零样本结果表（论文 Table 1） | [相机系下的双手重建](#相机系下的双手重建) |
 | ⏳ | 已发布数据的尺度校正相机轨迹 | 见 [已知局限](#️-已知局限) |
 | ❌ | 受许可证限制的管线适配（改动过的 HaWoR 源码、权重、MANO） | 不能再分发，见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) |
 
@@ -172,9 +172,9 @@ Viewer 启动后会自动在默认浏览器打开 `http://127.0.0.1:8011`，然�
 
 ## 🧠 MINT 是怎么工作的
 
-<img src="assets/readme/figure_system.webp" width="100%" alt="系统总览：数据来源与过滤、统一网络的四个头与刚体组合、世界坐标系输出">
+<img src="assets/readme/figure_teaser.webp" width="100%" alt="总览：左侧大规模第一视角视频，中间 MINT 与数据多样性对比，右侧零样本世界坐标系输出">
 
-<div align="center"><sub>上层：监督信号如何产出与过滤。中层：统一网络。下层：一次前向给出什么。图中环形图里只有公开的 <b>1,021.514 小时</b>管线伪标签属于本次发布，旁边的人工标注小时数是 Stage 2 的校准集，不在发布范围内。</sub></div>
+<div align="center"><sub>左侧：本次发布的监督数据 —— <b>1,021 小时</b>、<b>56 万</b> episode 的第一视角视频，以及它与 EgoDex、Ego4D、EPIC-KITCHENS 在多样性上的对比。右侧：一段未见过的视频单次前向通过 MINT 的结果 —— 世界坐标系相机与手部轨迹、MANO 手，以及重定向到机器人手的同一段运动。</sub></div>
 
 每帧只编码一次，四个头分工预测，再用显式刚体变换组合到世界坐标系 —— 于是世界坐标系下的误差会同时更新相机分支和手部分支。
 
@@ -192,9 +192,11 @@ Viewer 启动后会自动在默认浏览器打开 `http://127.0.0.1:8011`，然�
 | **头 04** | 逐帧手部存在性，左/右 logits，patch 交叉注意力 |
 | **组合** | `x_c = R x_w + t`、`p_w = Rᵀ(p_c − t)`、`Q_w = Rᵀ Q_c` —— 显式且可微 |
 | **推理时** | 不出深度图、不出点云、无稠密 3D 中间结果 |
-| **训练** | Stage 1 在 1,021 小时管线监督上预训练 → Stage 2 用小规模高精度相机–手部数据校准 |
+| **训练** | Stage 1 在 1,021 小时管线监督上预训练 → Stage 2 用小规模高精度轨迹数据校正相机轨迹，几何编码器与手部、存在性、视场角模块保持冻结 |
 
-<img src="assets/readme/figure_architecture.webp" width="100%" alt="模型结构：共享时空 token 驱动相机、视场角、MANO 与存在性四个头">
+<img src="assets/readme/figure_egopipeline.webp" width="100%" alt="EgoPipeline 各级：手部检测与帧过滤，GeoCalib / MoGe-2 / MegaSaM 相机位姿估计，HaWoR 手部重建，以及离群剔除、插值、时序平滑与世界坐标变换">
+
+<div align="center"><sub><b>EgoPipeline</b>，离线的监督信号生成器。上排：预过滤与各级估计器。下排：把各级原始输出整理成可用结构化状态的后处理。逐级说明见下方表格。</sub></div>
 
 ### 监督信号从哪里来
 
@@ -221,7 +223,41 @@ Viewer 启动后会自动在默认浏览器打开 `http://127.0.0.1:8011`，然�
 
 ## 📊 评测口径
 
-**本文不给出任何精度数字。** 零样本结果表随论文一起公布；在那之前，能精确说明的是评测口径。
+### 相机系下的双手重建
+
+论文 Table 1 原样搬运。所有行都在**覆盖率感知（coverage-aware）协议**下评分：某个方法拒绝输出的手不会被跳过，而是按一个标准 MANO 占位手的误差计入 —— 所以"不预测"永远不会比"预测得差"更划算。**MINT 在两个 benchmark 上都是零样本。** ViDiHand（标 `*`）在这两个 benchmark 的大部分数据上训练过，因此它是**参考行，不是可比行**；加粗标的是可比行中的最优值，不含该参考行。`MINT + UKF` 只是在推理时加上滤波，其余一切不变。
+
+| | 检测 | | | 3D 姿态 | | 朝向与位置 | | 时序 |
+| :-- | --: | --: | --: | --: | --: | --: | --: | --: |
+| **方法** | FAcc ↑ | Recall ↑ | F1 ↑ | MPJPE-p ↓<br><sub>mm</sub> | PA-MPJPE-p ↓<br><sub>mm</sub> | GO-p ↓<br><sub>度</sub> | CT-p ↓<br><sub>m</sub> | Jitter ↓<br><sub>mm/frame²</sub> |
+| ***ARCTIC*** | | | | | | | | |
+| InterWild [16] | 0.878 | 0.943 | 0.959 | 30.82 | 15.95 | 25.39 | 0.097 | 46.58 |
+| HaMeR [18] | 0.875 | 0.943 | 0.957 | 29.20 | 14.60 | 24.91 | 0.095 | 18.28 |
+| Hamba [5] | 0.833 | 0.912 | 0.941 | 31.23 | 17.17 | 27.82 | 0.110 | 15.36 |
+| WildHands [20] | 0.879 | 0.946 | 0.960 | 25.70 | 13.94 | 22.32 | **0.058** | 12.97 |
+| OmniHands [15] | 0.866 | 0.949 | 0.954 | 29.67 | 14.20 | 24.58 | 0.087 | 45.31 |
+| WiLoR [19] | **0.919** | 0.951 | 0.974 | **22.01** | **11.87** | **17.36** | 0.075 | 24.09 |
+| Dyn-HaMR [37] | 0.842 | 0.918 | 0.951 | 27.90 | 17.02 | 25.95 | 0.121 | 12.84 |
+| HaWoR [39] | 0.700 | 0.817 | 0.895 | 45.36 | 26.38 | 43.33 | 0.149 | 19.79 |
+| ViDiHand [33]\* | *0.997* | *0.999* | *0.999* | *21.67* | *9.82* | *14.64* | *0.047* | *3.18* |
+| MINT | 0.916 | **0.957** | **0.978** | 51.03 | 27.71 | 24.19 | 0.140 | 12.26 |
+| MINT + UKF | 0.916 | **0.957** | **0.978** | 51.09 | 27.70 | 24.22 | 0.140 | **2.54** |
+| ***HOT3D*** | | | | | | | | |
+| InterWild [16] | 0.669 | 0.881 | 0.868 | 77.17 | 24.81 | 58.50 | 0.213 | 101.16 |
+| HaMeR [18] | 0.692 | 0.904 | 0.883 | 68.31 | 21.46 | 49.64 | 0.102 | 23.63 |
+| Hamba [5] | 0.632 | 0.828 | 0.853 | 71.73 | 29.62 | 56.53 | 0.128 | 18.51 |
+| WildHands [20] | 0.655 | 0.863 | 0.844 | 52.79 | 28.95 | 53.93 | 0.157 | 22.89 |
+| OmniHands [15] | 0.649 | 0.895 | 0.868 | 63.28 | 22.68 | 49.12 | 0.133 | 69.51 |
+| WiLoR [19] | 0.827 | 0.897 | 0.937 | 30.97 | 19.98 | 25.75 | 0.098 | 17.98 |
+| Dyn-HaMR [37] | 0.614 | 0.811 | 0.802 | 74.21 | 38.20 | 43.85 | 0.571 | 44.94 |
+| HaWoR [39] | 0.348 | 0.499 | 0.654 | 71.40 | 66.03 | 79.35 | 0.262 | 23.87 |
+| ViDiHand [33]\* | *0.948* | *0.974* | *0.983* | *21.51* | *11.38* | *15.83* | *0.040* | *3.74* |
+| MINT | **0.940** | **0.977** | **0.950** | **23.61** | 10.70 | 16.78 | **0.073** | 11.52 |
+| MINT + UKF | **0.940** | **0.977** | **0.950** | 23.62 | **10.69** | **16.77** | **0.073** | **2.39** |
+
+这张表要和[已知局限](#️-已知局限)的第二条一起读。在 **HOT3D** 上，零样本的 MINT 在检测三项、MPJPE-p、PA-MPJPE-p、GO-p、CT-p 上都是可比行中最优，`MINT + UKF` 的 jitter 是全表最低（含参考行）。在 **ARCTIC** 上，它在相机系下的关节误差明显落后于那些专做手部重建的单任务方法。综合起来，本版 checkpoint 在相机系手部这一项上是**接近 SOTA，而不是达到 SOTA**；原因是结构性的：这版 checkpoint 的手部分支只在 EgoPipeline 产出的粗糙伪标签上训练过，从未用高精度相机系手部数据微调，所以它只能逼近教师的精度而不会超过它。两个 benchmark 我们都报，而不是只挑好看的那个。
+
+### 评测协议
 
 - **完全留出。** HOT3D 与 ARCTIC 的图像、管线标签和真值，全部排除在训练、高精度校准、超参与 loss 权重选择、checkpoint 选择之外，且不做测试时调参。只有满足这一条件的模型才能进入零样本主表。
 - **划分规则。** 所有官方划分都在切片之前按原始视频 ID 完成；只要有参与者 ID，就再做一次参与者级隔离。
@@ -320,6 +356,7 @@ python scripts/build_sample_lerobot.py \
 这些事情我们宁愿你在这里读到，而不是事后才发现：
 
 - **EgoPipeline 的输出是伪标签，不是真值。** 所有关于 MINT 精度的结论都改用留出的真实真值来度量。
+- **相机系下的手部精度受教师约束 —— 接近 SOTA，而不是达到 SOTA。** 本次发布的 checkpoint，手部分支完全由 EgoPipeline 产出的粗糙伪标签监督；Stage 2 只校正相机轨迹，手部、存在性与视场角模块保持冻结，全程没有用高精度相机系手部数据做过微调。因此它在相机系下的手部重建只能逼近、而不会超过它所学习的管线输出的精度：在 HOT3D 上是可比行中最优，但在 ARCTIC 这类近距离双手操物数据上明显落后于专做手部重建的单任务方法（见 [Table 1](#相机系下的双手重建)）。用高精度相机系手部数据微调手部分支是显而易见的改进方向，不在本次发布范围内。
 - **已发布的相机轨迹仍存在尺度放大**（见上文警示）。请用于预训练，不要用于米制评测。
 - **32 帧片段训练本身不能证明长视频一致性。** 长序列行为会单独报告，不从片段级精度外推。
 - **存在性标签继承了固定的检测器阈值。** 共享时序特征让学生能纠正教师的孤立漏检和误检，而这一点是对照盲评的存在性标注来审计的，不是对照它训练时用的伪标签。
