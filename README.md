@@ -17,9 +17,9 @@
 
 <h2>MINT: Minting a Unified Model for World-Space Camera and Hand Motion<br>from Scalable Egocentric Pipeline Supervision</h2>
 
-Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Yizhou Wang<sup>1,3</sup> &nbsp;·&nbsp; Zhenjie Yang<sup>4</sup> &nbsp;·&nbsp; Jiahao Chen<sup>3,\*</sup> &nbsp;·&nbsp; Guanqi He<sup>2,3,\*</sup>
+Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Yizhou Wang<sup>1,3</sup> &nbsp;·&nbsp; Zhenjie Yang<sup>4</sup> &nbsp;·&nbsp; Yide Liu<sup>3,5</sup> &nbsp;·&nbsp; Jiahao Chen<sup>3,\*</sup> &nbsp;·&nbsp; Guanqi He<sup>2,3,\*</sup>
 
-<sub><sup>1</sup>ShanghaiTech University &nbsp;&nbsp;<sup>2</sup>Tsinghua University &nbsp;&nbsp;<sup>3</sup>Wuji Technology &nbsp;&nbsp;<sup>4</sup>The University of Hong Kong &nbsp;&nbsp;<sup>\*</sup>Corresponding authors</sub>
+<sub><sup>1</sup>ShanghaiTech University &nbsp;&nbsp;<sup>2</sup>Tsinghua University &nbsp;&nbsp;<sup>3</sup>Wuji Technology &nbsp;&nbsp;<sup>4</sup>The University of Hong Kong &nbsp;&nbsp;<sup>5</sup>Zhejiang University &nbsp;&nbsp;<sup>\*</sup>Corresponding authors</sub>
 
 <!-- TODO: paste the arXiv link into the badge below once it is live. -->
 [![arXiv](https://img.shields.io/badge/arXiv-coming_soon-b31b1b)]()
@@ -55,8 +55,8 @@ Activity understanding, robot imitation and AR all want the same thing: **where 
 
 ## 📑 Table of Contents
 
-<details>
-<summary>Click to expand</summary>
+<details open>
+<summary>Collapse</summary>
 
 - [📰 News](#-news)
 - [📋 Release status](#-release-status)
@@ -104,7 +104,7 @@ Activity understanding, robot imitation and AR all want the same thing: **where 
 | ✅ | EgoPipeline orchestration, cleaning and LeRobot export reference | `ray_pipeline/` |
 | ✅ | Wuji hand URDF/MJCF/STL and retargeting | `eval/simulate/wuji-retargeting/` |
 | ✅ | Zero-shot HOT3D / ARCTIC result table (paper Table 1) | [Camera-frame bimanual reconstruction](#camera-frame-bimanual-reconstruction) |
-| ⏳ | Scale-corrected camera trajectories for the released dataset | see [Known limits](#️-known-limits) |
+| ⏳ | Scale-corrected camera trajectories — the released dataset's trajectories are scale-enlarged | Corrected version not released yet; the current ones are usable for pretraining, not for metric evaluation. Cause in [Public Ego pretraining data](#️-public-ego-pretraining-data) |
 | ❌ | License-restricted pipeline adaptations (adapted HaWoR source, weights, MANO) | cannot be redistributed; see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) |
 
 ## 🚀 Quick Start: Web Viewer
@@ -422,7 +422,7 @@ The paper is under review; this entry will be replaced with the published refere
   title  = {MINT: Minting a Unified Model for World-Space Camera and Hand Motion
             from Scalable Egocentric Pipeline Supervision},
   author = {Zhu, Zijie and Cai, Weiren and Wang, Yizhou and Yang, Zhenjie and
-            Chen, Jiahao and He, Guanqi},
+            Liu, Yide and Chen, Jiahao and He, Guanqi},
   year   = {2026},
   note   = {Manuscript under review}
 }
