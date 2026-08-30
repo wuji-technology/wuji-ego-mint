@@ -223,16 +223,26 @@ Viewer 启动后会自动在默认浏览器打开 `http://127.0.0.1:8011`，然�
 
 推理吞吐，512 × 384、30 fps，条件完全一致。时间为**稳态下的每帧边际成本**。单卡对比的是 **HaWoR**，即 EgoPipeline 的手部重建分支；四卡对比的是完整的 **EgoPipeline** 串行链。VITRA 作为共同的外部参考列出，加速比一列即以它为基准。
 
-| 方法 | 时间 ↓<br><sub>ms/帧</sub> | fps ↑ | 加速比 ↑<br><sub>相对 VITRA</sub> |
-| :-- | --: | --: | --: |
-| ***单卡*** | | | |
-| VITRA | 1260.0 | 0.8 | — |
-| HaWoR | 105.1 | 9.5 | 12.0× |
-| MINT | **72.4** | **13.8** | **17.4×** |
-| ***四卡*** | | | |
-| VITRA | 283.3 | 3.5 | — |
-| EgoPipeline | 83.4 | 12.0 | 3.4× |
-| MINT | **22.7** | **44.1** | **12.5×** |
+<table>
+<thead>
+<tr>
+  <th align="left">方法</th>
+  <th align="right">时间 ↓<br><sub>ms/帧</sub></th>
+  <th align="right">fps ↑</th>
+  <th align="right">加速比 ↑<br><sub>相对 VITRA</sub></th>
+</tr>
+</thead>
+<tbody>
+<tr><th colspan="4" align="left">单卡</th></tr>
+<tr><td align="left">VITRA</td><td align="right">1260.0</td><td align="right">0.8</td><td align="right">—</td></tr>
+<tr><td align="left">HaWoR</td><td align="right">105.1</td><td align="right">9.5</td><td align="right">12.0×</td></tr>
+<tr><td align="left">MINT</td><td align="right"><b>72.4</b></td><td align="right"><b>13.8</b></td><td align="right"><b>17.4×</b></td></tr>
+<tr><th colspan="4" align="left">四卡</th></tr>
+<tr><td align="left">VITRA</td><td align="right">283.3</td><td align="right">3.5</td><td align="right">—</td></tr>
+<tr><td align="left">EgoPipeline</td><td align="right">83.4</td><td align="right">12.0</td><td align="right">3.4×</td></tr>
+<tr><td align="left">MINT</td><td align="right"><b>22.7</b></td><td align="right"><b>44.1</b></td><td align="right"><b>12.5×</b></td></tr>
+</tbody>
+</table>
 
 换成与 MINT 真正替代的对象相比，而不是与外部参考相比：单卡下是 HaWoR 的 **1.45 倍**（105.1 → 72.4 ms/帧），四卡下是完整 EgoPipeline 串行链的 **3.7 倍**（83.4 → 22.7 ms/帧）。
 
@@ -244,33 +254,53 @@ Viewer 启动后会自动在默认浏览器打开 `http://127.0.0.1:8011`，然�
 
 论文 Table 1 原样搬运。所有行都在**覆盖率感知（coverage-aware）协议**下评分：某个方法拒绝输出的手不会被跳过，而是按一个标准 MANO 占位手的误差计入 —— 所以"不预测"永远不会比"预测得差"更划算。**MINT 在两个 benchmark 上都是零样本。** ViDiHand（标 `*`）在这两个 benchmark 的大部分数据上训练过，因此它是**参考行，不是可比行**；加粗标的是可比行中的最优值，不含该参考行。`MINT + UKF` 只是在推理时加上滤波，其余一切不变。
 
-| | 检测 | | | 3D 姿态 | | 朝向与位置 | | 时序 |
-| :-- | --: | --: | --: | --: | --: | --: | --: | --: |
-| **方法** | FAcc ↑ | Recall ↑ | F1 ↑ | MPJPE-p ↓<br><sub>mm</sub> | PA-MPJPE-p ↓<br><sub>mm</sub> | GO-p ↓<br><sub>度</sub> | CT-p ↓<br><sub>m</sub> | Jitter ↓<br><sub>mm/frame²</sub> |
-| ***ARCTIC*** | | | | | | | | |
-| InterWild [16] | 0.878 | 0.943 | 0.959 | 30.82 | 15.95 | 25.39 | 0.097 | 46.58 |
-| HaMeR [18] | 0.875 | 0.943 | 0.957 | 29.20 | 14.60 | 24.91 | 0.095 | 18.28 |
-| Hamba [5] | 0.833 | 0.912 | 0.941 | 31.23 | 17.17 | 27.82 | 0.110 | 15.36 |
-| WildHands [20] | 0.879 | 0.946 | 0.960 | 25.70 | 13.94 | 22.32 | **0.058** | 12.97 |
-| OmniHands [15] | 0.866 | 0.949 | 0.954 | 29.67 | 14.20 | 24.58 | 0.087 | 45.31 |
-| WiLoR [19] | **0.919** | 0.951 | 0.974 | **22.01** | **11.87** | **17.36** | 0.075 | 24.09 |
-| Dyn-HaMR [37] | 0.842 | 0.918 | 0.951 | 27.90 | 17.02 | 25.95 | 0.121 | 12.84 |
-| HaWoR [39] | 0.700 | 0.817 | 0.895 | 45.36 | 26.38 | 43.33 | 0.149 | 19.79 |
-| ViDiHand [33]\* | *0.997* | *0.999* | *0.999* | *21.67* | *9.82* | *14.64* | *0.047* | *3.18* |
-| MINT | 0.916 | **0.957** | **0.978** | 51.03 | 27.71 | 24.19 | 0.140 | 12.26 |
-| MINT + UKF | 0.916 | **0.957** | **0.978** | 51.09 | 27.70 | 24.22 | 0.140 | **2.54** |
-| ***HOT3D*** | | | | | | | | |
-| InterWild [16] | 0.669 | 0.881 | 0.868 | 77.17 | 24.81 | 58.50 | 0.213 | 101.16 |
-| HaMeR [18] | 0.692 | 0.904 | 0.883 | 68.31 | 21.46 | 49.64 | 0.102 | 23.63 |
-| Hamba [5] | 0.632 | 0.828 | 0.853 | 71.73 | 29.62 | 56.53 | 0.128 | 18.51 |
-| WildHands [20] | 0.655 | 0.863 | 0.844 | 52.79 | 28.95 | 53.93 | 0.157 | 22.89 |
-| OmniHands [15] | 0.649 | 0.895 | 0.868 | 63.28 | 22.68 | 49.12 | 0.133 | 69.51 |
-| WiLoR [19] | 0.827 | 0.897 | 0.937 | 30.97 | 19.98 | 25.75 | 0.098 | 17.98 |
-| Dyn-HaMR [37] | 0.614 | 0.811 | 0.802 | 74.21 | 38.20 | 43.85 | 0.571 | 44.94 |
-| HaWoR [39] | 0.348 | 0.499 | 0.654 | 71.40 | 66.03 | 79.35 | 0.262 | 23.87 |
-| ViDiHand [33]\* | *0.948* | *0.974* | *0.983* | *21.51* | *11.38* | *15.83* | *0.040* | *3.74* |
-| MINT | **0.940** | **0.977** | **0.950** | **23.61** | 10.70 | 16.78 | **0.073** | 11.52 |
-| MINT + UKF | **0.940** | **0.977** | **0.950** | 23.62 | **10.69** | **16.77** | **0.073** | **2.39** |
+<table>
+<thead>
+<tr>
+  <th rowspan="2" align="left">方法</th>
+  <th colspan="3" align="center">检测</th>
+  <th colspan="2" align="center">3D 姿态</th>
+  <th colspan="2" align="center">朝向与位置</th>
+  <th colspan="1" align="center">时序</th>
+</tr>
+<tr>
+  <th align="right">FAcc ↑</th>
+  <th align="right">Recall ↑</th>
+  <th align="right">F1 ↑</th>
+  <th align="right">MPJPE-p ↓<br><sub>mm</sub></th>
+  <th align="right">PA-MPJPE-p ↓<br><sub>mm</sub></th>
+  <th align="right">GO-p ↓<br><sub>度</sub></th>
+  <th align="right">CT-p ↓<br><sub>m</sub></th>
+  <th align="right">Jitter ↓<br><sub>mm/frame²</sub></th>
+</tr>
+</thead>
+<tbody>
+<tr><th colspan="9" align="left">ARCTIC</th></tr>
+<tr><td align="left">InterWild [16]</td><td align="right">0.878</td><td align="right">0.943</td><td align="right">0.959</td><td align="right">30.82</td><td align="right">15.95</td><td align="right">25.39</td><td align="right">0.097</td><td align="right">46.58</td></tr>
+<tr><td align="left">HaMeR [18]</td><td align="right">0.875</td><td align="right">0.943</td><td align="right">0.957</td><td align="right">29.20</td><td align="right">14.60</td><td align="right">24.91</td><td align="right">0.095</td><td align="right">18.28</td></tr>
+<tr><td align="left">Hamba [5]</td><td align="right">0.833</td><td align="right">0.912</td><td align="right">0.941</td><td align="right">31.23</td><td align="right">17.17</td><td align="right">27.82</td><td align="right">0.110</td><td align="right">15.36</td></tr>
+<tr><td align="left">WildHands [20]</td><td align="right">0.879</td><td align="right">0.946</td><td align="right">0.960</td><td align="right">25.70</td><td align="right">13.94</td><td align="right">22.32</td><td align="right"><b>0.058</b></td><td align="right">12.97</td></tr>
+<tr><td align="left">OmniHands [15]</td><td align="right">0.866</td><td align="right">0.949</td><td align="right">0.954</td><td align="right">29.67</td><td align="right">14.20</td><td align="right">24.58</td><td align="right">0.087</td><td align="right">45.31</td></tr>
+<tr><td align="left">WiLoR [19]</td><td align="right"><b>0.919</b></td><td align="right">0.951</td><td align="right">0.974</td><td align="right"><b>22.01</b></td><td align="right"><b>11.87</b></td><td align="right"><b>17.36</b></td><td align="right">0.075</td><td align="right">24.09</td></tr>
+<tr><td align="left">Dyn-HaMR [37]</td><td align="right">0.842</td><td align="right">0.918</td><td align="right">0.951</td><td align="right">27.90</td><td align="right">17.02</td><td align="right">25.95</td><td align="right">0.121</td><td align="right">12.84</td></tr>
+<tr><td align="left">HaWoR [39]</td><td align="right">0.700</td><td align="right">0.817</td><td align="right">0.895</td><td align="right">45.36</td><td align="right">26.38</td><td align="right">43.33</td><td align="right">0.149</td><td align="right">19.79</td></tr>
+<tr><td align="left"><i>ViDiHand [33]*</i></td><td align="right"><i>0.997</i></td><td align="right"><i>0.999</i></td><td align="right"><i>0.999</i></td><td align="right"><i>21.67</i></td><td align="right"><i>9.82</i></td><td align="right"><i>14.64</i></td><td align="right"><i>0.047</i></td><td align="right"><i>3.18</i></td></tr>
+<tr><td align="left">MINT</td><td align="right">0.916</td><td align="right"><b>0.957</b></td><td align="right"><b>0.978</b></td><td align="right">51.03</td><td align="right">27.71</td><td align="right">24.19</td><td align="right">0.140</td><td align="right">12.26</td></tr>
+<tr><td align="left">MINT + UKF</td><td align="right">0.916</td><td align="right"><b>0.957</b></td><td align="right"><b>0.978</b></td><td align="right">51.09</td><td align="right">27.70</td><td align="right">24.22</td><td align="right">0.140</td><td align="right"><b>2.54</b></td></tr>
+<tr><th colspan="9" align="left">HOT3D</th></tr>
+<tr><td align="left">InterWild [16]</td><td align="right">0.669</td><td align="right">0.881</td><td align="right">0.868</td><td align="right">77.17</td><td align="right">24.81</td><td align="right">58.50</td><td align="right">0.213</td><td align="right">101.16</td></tr>
+<tr><td align="left">HaMeR [18]</td><td align="right">0.692</td><td align="right">0.904</td><td align="right">0.883</td><td align="right">68.31</td><td align="right">21.46</td><td align="right">49.64</td><td align="right">0.102</td><td align="right">23.63</td></tr>
+<tr><td align="left">Hamba [5]</td><td align="right">0.632</td><td align="right">0.828</td><td align="right">0.853</td><td align="right">71.73</td><td align="right">29.62</td><td align="right">56.53</td><td align="right">0.128</td><td align="right">18.51</td></tr>
+<tr><td align="left">WildHands [20]</td><td align="right">0.655</td><td align="right">0.863</td><td align="right">0.844</td><td align="right">52.79</td><td align="right">28.95</td><td align="right">53.93</td><td align="right">0.157</td><td align="right">22.89</td></tr>
+<tr><td align="left">OmniHands [15]</td><td align="right">0.649</td><td align="right">0.895</td><td align="right">0.868</td><td align="right">63.28</td><td align="right">22.68</td><td align="right">49.12</td><td align="right">0.133</td><td align="right">69.51</td></tr>
+<tr><td align="left">WiLoR [19]</td><td align="right">0.827</td><td align="right">0.897</td><td align="right">0.937</td><td align="right">30.97</td><td align="right">19.98</td><td align="right">25.75</td><td align="right">0.098</td><td align="right">17.98</td></tr>
+<tr><td align="left">Dyn-HaMR [37]</td><td align="right">0.614</td><td align="right">0.811</td><td align="right">0.802</td><td align="right">74.21</td><td align="right">38.20</td><td align="right">43.85</td><td align="right">0.571</td><td align="right">44.94</td></tr>
+<tr><td align="left">HaWoR [39]</td><td align="right">0.348</td><td align="right">0.499</td><td align="right">0.654</td><td align="right">71.40</td><td align="right">66.03</td><td align="right">79.35</td><td align="right">0.262</td><td align="right">23.87</td></tr>
+<tr><td align="left"><i>ViDiHand [33]*</i></td><td align="right"><i>0.948</i></td><td align="right"><i>0.974</i></td><td align="right"><i>0.983</i></td><td align="right"><i>21.51</i></td><td align="right"><i>11.38</i></td><td align="right"><i>15.83</i></td><td align="right"><i>0.040</i></td><td align="right"><i>3.74</i></td></tr>
+<tr><td align="left">MINT</td><td align="right"><b>0.940</b></td><td align="right"><b>0.977</b></td><td align="right"><b>0.950</b></td><td align="right"><b>23.61</b></td><td align="right">10.70</td><td align="right">16.78</td><td align="right"><b>0.073</b></td><td align="right">11.52</td></tr>
+<tr><td align="left">MINT + UKF</td><td align="right"><b>0.940</b></td><td align="right"><b>0.977</b></td><td align="right"><b>0.950</b></td><td align="right">23.62</td><td align="right"><b>10.69</b></td><td align="right"><b>16.77</b></td><td align="right"><b>0.073</b></td><td align="right"><b>2.39</b></td></tr>
+</tbody>
+</table>
 
 这张表要和[已知局限](#️-已知局限)的第二条一起读。在 **HOT3D** 上，零样本的 MINT 在检测三项、MPJPE-p、PA-MPJPE-p、GO-p、CT-p 上都是可比行中最优，`MINT + UKF` 的 jitter 是全表最低（含参考行）。在 **ARCTIC** 上，它在相机系下的关节误差明显落后于那些专做手部重建的单任务方法。综合起来，本版 checkpoint 在相机系手部这一项上是**接近 SOTA，而不是达到 SOTA**；原因是结构性的：这版 checkpoint 的手部分支只在 EgoPipeline 产出的粗糙伪标签上训练过，从未用高精度相机系手部数据微调，所以它只能逼近教师的精度而不会超过它。两个 benchmark 我们都报，而不是只挑好看的那个。
 

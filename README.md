@@ -226,16 +226,26 @@ A staged chain has structural costs that better engineering does not remove: eac
 
 Inference throughput at 512 × 384 and 30 fps under identical conditions. Time is the **marginal cost per frame in steady state**. On one GPU the comparison is against **HaWoR**, the hand-reconstruction branch of EgoPipeline; on four GPUs it is against the full **EgoPipeline** cascade. VITRA is included as a common external reference, and the speedup column is measured against it.
 
-| Method | Time ↓<br><sub>ms/frame</sub> | fps ↑ | Speedup ↑<br><sub>vs VITRA</sub> |
-| :-- | --: | --: | --: |
-| ***One GPU*** | | | |
-| VITRA | 1260.0 | 0.8 | — |
-| HaWoR | 105.1 | 9.5 | 12.0× |
-| MINT | **72.4** | **13.8** | **17.4×** |
-| ***Four GPUs*** | | | |
-| VITRA | 283.3 | 3.5 | — |
-| EgoPipeline | 83.4 | 12.0 | 3.4× |
-| MINT | **22.7** | **44.1** | **12.5×** |
+<table>
+<thead>
+<tr>
+  <th align="left">Method</th>
+  <th align="right">Time ↓<br><sub>ms/frame</sub></th>
+  <th align="right">fps ↑</th>
+  <th align="right">Speedup ↑<br><sub>vs VITRA</sub></th>
+</tr>
+</thead>
+<tbody>
+<tr><th colspan="4" align="left">One GPU</th></tr>
+<tr><td align="left">VITRA</td><td align="right">1260.0</td><td align="right">0.8</td><td align="right">—</td></tr>
+<tr><td align="left">HaWoR</td><td align="right">105.1</td><td align="right">9.5</td><td align="right">12.0×</td></tr>
+<tr><td align="left">MINT</td><td align="right"><b>72.4</b></td><td align="right"><b>13.8</b></td><td align="right"><b>17.4×</b></td></tr>
+<tr><th colspan="4" align="left">Four GPUs</th></tr>
+<tr><td align="left">VITRA</td><td align="right">283.3</td><td align="right">3.5</td><td align="right">—</td></tr>
+<tr><td align="left">EgoPipeline</td><td align="right">83.4</td><td align="right">12.0</td><td align="right">3.4×</td></tr>
+<tr><td align="left">MINT</td><td align="right"><b>22.7</b></td><td align="right"><b>44.1</b></td><td align="right"><b>12.5×</b></td></tr>
+</tbody>
+</table>
 
 Measured against the thing MINT actually replaces rather than against the external reference: **1.45×** HaWoR on one GPU (105.1 → 72.4 ms/frame) and **3.7×** the full EgoPipeline cascade on four GPUs (83.4 → 22.7 ms/frame).
 
@@ -247,33 +257,53 @@ Separately, the EgoPipeline baseline is itself already distributed-optimised —
 
 Table 1 of the paper, reproduced verbatim. Every row is scored under the **coverage-aware protocol**: a hand a method declines to report is not skipped, it is charged the error of a canonical MANO placeholder — so refusing to predict is never cheaper than predicting badly. **MINT is zero-shot on both benchmarks.** ViDiHand (marked `*`) is trained on most of both, so it is a **reference row, not a comparable one**; bold marks the best value among the comparable rows, excluding that reference row. `MINT + UKF` applies the inference-time filter and changes nothing else.
 
-| | Detection | | | 3D pose | | Orient. & pos. | | Temporal |
-| :-- | --: | --: | --: | --: | --: | --: | --: | --: |
-| **Method** | FAcc ↑ | Recall ↑ | F1 ↑ | MPJPE-p ↓<br><sub>mm</sub> | PA-MPJPE-p ↓<br><sub>mm</sub> | GO-p ↓<br><sub>deg</sub> | CT-p ↓<br><sub>m</sub> | Jitter ↓<br><sub>mm/frame²</sub> |
-| ***ARCTIC*** | | | | | | | | |
-| InterWild [16] | 0.878 | 0.943 | 0.959 | 30.82 | 15.95 | 25.39 | 0.097 | 46.58 |
-| HaMeR [18] | 0.875 | 0.943 | 0.957 | 29.20 | 14.60 | 24.91 | 0.095 | 18.28 |
-| Hamba [5] | 0.833 | 0.912 | 0.941 | 31.23 | 17.17 | 27.82 | 0.110 | 15.36 |
-| WildHands [20] | 0.879 | 0.946 | 0.960 | 25.70 | 13.94 | 22.32 | **0.058** | 12.97 |
-| OmniHands [15] | 0.866 | 0.949 | 0.954 | 29.67 | 14.20 | 24.58 | 0.087 | 45.31 |
-| WiLoR [19] | **0.919** | 0.951 | 0.974 | **22.01** | **11.87** | **17.36** | 0.075 | 24.09 |
-| Dyn-HaMR [37] | 0.842 | 0.918 | 0.951 | 27.90 | 17.02 | 25.95 | 0.121 | 12.84 |
-| HaWoR [39] | 0.700 | 0.817 | 0.895 | 45.36 | 26.38 | 43.33 | 0.149 | 19.79 |
-| ViDiHand [33]\* | *0.997* | *0.999* | *0.999* | *21.67* | *9.82* | *14.64* | *0.047* | *3.18* |
-| MINT | 0.916 | **0.957** | **0.978** | 51.03 | 27.71 | 24.19 | 0.140 | 12.26 |
-| MINT + UKF | 0.916 | **0.957** | **0.978** | 51.09 | 27.70 | 24.22 | 0.140 | **2.54** |
-| ***HOT3D*** | | | | | | | | |
-| InterWild [16] | 0.669 | 0.881 | 0.868 | 77.17 | 24.81 | 58.50 | 0.213 | 101.16 |
-| HaMeR [18] | 0.692 | 0.904 | 0.883 | 68.31 | 21.46 | 49.64 | 0.102 | 23.63 |
-| Hamba [5] | 0.632 | 0.828 | 0.853 | 71.73 | 29.62 | 56.53 | 0.128 | 18.51 |
-| WildHands [20] | 0.655 | 0.863 | 0.844 | 52.79 | 28.95 | 53.93 | 0.157 | 22.89 |
-| OmniHands [15] | 0.649 | 0.895 | 0.868 | 63.28 | 22.68 | 49.12 | 0.133 | 69.51 |
-| WiLoR [19] | 0.827 | 0.897 | 0.937 | 30.97 | 19.98 | 25.75 | 0.098 | 17.98 |
-| Dyn-HaMR [37] | 0.614 | 0.811 | 0.802 | 74.21 | 38.20 | 43.85 | 0.571 | 44.94 |
-| HaWoR [39] | 0.348 | 0.499 | 0.654 | 71.40 | 66.03 | 79.35 | 0.262 | 23.87 |
-| ViDiHand [33]\* | *0.948* | *0.974* | *0.983* | *21.51* | *11.38* | *15.83* | *0.040* | *3.74* |
-| MINT | **0.940** | **0.977** | **0.950** | **23.61** | 10.70 | 16.78 | **0.073** | 11.52 |
-| MINT + UKF | **0.940** | **0.977** | **0.950** | 23.62 | **10.69** | **16.77** | **0.073** | **2.39** |
+<table>
+<thead>
+<tr>
+  <th rowspan="2" align="left">Method</th>
+  <th colspan="3" align="center">Detection</th>
+  <th colspan="2" align="center">3D pose</th>
+  <th colspan="2" align="center">Orient. &amp; pos.</th>
+  <th colspan="1" align="center">Temporal</th>
+</tr>
+<tr>
+  <th align="right">FAcc ↑</th>
+  <th align="right">Recall ↑</th>
+  <th align="right">F1 ↑</th>
+  <th align="right">MPJPE-p ↓<br><sub>mm</sub></th>
+  <th align="right">PA-MPJPE-p ↓<br><sub>mm</sub></th>
+  <th align="right">GO-p ↓<br><sub>deg</sub></th>
+  <th align="right">CT-p ↓<br><sub>m</sub></th>
+  <th align="right">Jitter ↓<br><sub>mm/frame²</sub></th>
+</tr>
+</thead>
+<tbody>
+<tr><th colspan="9" align="left">ARCTIC</th></tr>
+<tr><td align="left">InterWild [16]</td><td align="right">0.878</td><td align="right">0.943</td><td align="right">0.959</td><td align="right">30.82</td><td align="right">15.95</td><td align="right">25.39</td><td align="right">0.097</td><td align="right">46.58</td></tr>
+<tr><td align="left">HaMeR [18]</td><td align="right">0.875</td><td align="right">0.943</td><td align="right">0.957</td><td align="right">29.20</td><td align="right">14.60</td><td align="right">24.91</td><td align="right">0.095</td><td align="right">18.28</td></tr>
+<tr><td align="left">Hamba [5]</td><td align="right">0.833</td><td align="right">0.912</td><td align="right">0.941</td><td align="right">31.23</td><td align="right">17.17</td><td align="right">27.82</td><td align="right">0.110</td><td align="right">15.36</td></tr>
+<tr><td align="left">WildHands [20]</td><td align="right">0.879</td><td align="right">0.946</td><td align="right">0.960</td><td align="right">25.70</td><td align="right">13.94</td><td align="right">22.32</td><td align="right"><b>0.058</b></td><td align="right">12.97</td></tr>
+<tr><td align="left">OmniHands [15]</td><td align="right">0.866</td><td align="right">0.949</td><td align="right">0.954</td><td align="right">29.67</td><td align="right">14.20</td><td align="right">24.58</td><td align="right">0.087</td><td align="right">45.31</td></tr>
+<tr><td align="left">WiLoR [19]</td><td align="right"><b>0.919</b></td><td align="right">0.951</td><td align="right">0.974</td><td align="right"><b>22.01</b></td><td align="right"><b>11.87</b></td><td align="right"><b>17.36</b></td><td align="right">0.075</td><td align="right">24.09</td></tr>
+<tr><td align="left">Dyn-HaMR [37]</td><td align="right">0.842</td><td align="right">0.918</td><td align="right">0.951</td><td align="right">27.90</td><td align="right">17.02</td><td align="right">25.95</td><td align="right">0.121</td><td align="right">12.84</td></tr>
+<tr><td align="left">HaWoR [39]</td><td align="right">0.700</td><td align="right">0.817</td><td align="right">0.895</td><td align="right">45.36</td><td align="right">26.38</td><td align="right">43.33</td><td align="right">0.149</td><td align="right">19.79</td></tr>
+<tr><td align="left"><i>ViDiHand [33]*</i></td><td align="right"><i>0.997</i></td><td align="right"><i>0.999</i></td><td align="right"><i>0.999</i></td><td align="right"><i>21.67</i></td><td align="right"><i>9.82</i></td><td align="right"><i>14.64</i></td><td align="right"><i>0.047</i></td><td align="right"><i>3.18</i></td></tr>
+<tr><td align="left">MINT</td><td align="right">0.916</td><td align="right"><b>0.957</b></td><td align="right"><b>0.978</b></td><td align="right">51.03</td><td align="right">27.71</td><td align="right">24.19</td><td align="right">0.140</td><td align="right">12.26</td></tr>
+<tr><td align="left">MINT + UKF</td><td align="right">0.916</td><td align="right"><b>0.957</b></td><td align="right"><b>0.978</b></td><td align="right">51.09</td><td align="right">27.70</td><td align="right">24.22</td><td align="right">0.140</td><td align="right"><b>2.54</b></td></tr>
+<tr><th colspan="9" align="left">HOT3D</th></tr>
+<tr><td align="left">InterWild [16]</td><td align="right">0.669</td><td align="right">0.881</td><td align="right">0.868</td><td align="right">77.17</td><td align="right">24.81</td><td align="right">58.50</td><td align="right">0.213</td><td align="right">101.16</td></tr>
+<tr><td align="left">HaMeR [18]</td><td align="right">0.692</td><td align="right">0.904</td><td align="right">0.883</td><td align="right">68.31</td><td align="right">21.46</td><td align="right">49.64</td><td align="right">0.102</td><td align="right">23.63</td></tr>
+<tr><td align="left">Hamba [5]</td><td align="right">0.632</td><td align="right">0.828</td><td align="right">0.853</td><td align="right">71.73</td><td align="right">29.62</td><td align="right">56.53</td><td align="right">0.128</td><td align="right">18.51</td></tr>
+<tr><td align="left">WildHands [20]</td><td align="right">0.655</td><td align="right">0.863</td><td align="right">0.844</td><td align="right">52.79</td><td align="right">28.95</td><td align="right">53.93</td><td align="right">0.157</td><td align="right">22.89</td></tr>
+<tr><td align="left">OmniHands [15]</td><td align="right">0.649</td><td align="right">0.895</td><td align="right">0.868</td><td align="right">63.28</td><td align="right">22.68</td><td align="right">49.12</td><td align="right">0.133</td><td align="right">69.51</td></tr>
+<tr><td align="left">WiLoR [19]</td><td align="right">0.827</td><td align="right">0.897</td><td align="right">0.937</td><td align="right">30.97</td><td align="right">19.98</td><td align="right">25.75</td><td align="right">0.098</td><td align="right">17.98</td></tr>
+<tr><td align="left">Dyn-HaMR [37]</td><td align="right">0.614</td><td align="right">0.811</td><td align="right">0.802</td><td align="right">74.21</td><td align="right">38.20</td><td align="right">43.85</td><td align="right">0.571</td><td align="right">44.94</td></tr>
+<tr><td align="left">HaWoR [39]</td><td align="right">0.348</td><td align="right">0.499</td><td align="right">0.654</td><td align="right">71.40</td><td align="right">66.03</td><td align="right">79.35</td><td align="right">0.262</td><td align="right">23.87</td></tr>
+<tr><td align="left"><i>ViDiHand [33]*</i></td><td align="right"><i>0.948</i></td><td align="right"><i>0.974</i></td><td align="right"><i>0.983</i></td><td align="right"><i>21.51</i></td><td align="right"><i>11.38</i></td><td align="right"><i>15.83</i></td><td align="right"><i>0.040</i></td><td align="right"><i>3.74</i></td></tr>
+<tr><td align="left">MINT</td><td align="right"><b>0.940</b></td><td align="right"><b>0.977</b></td><td align="right"><b>0.950</b></td><td align="right"><b>23.61</b></td><td align="right">10.70</td><td align="right">16.78</td><td align="right"><b>0.073</b></td><td align="right">11.52</td></tr>
+<tr><td align="left">MINT + UKF</td><td align="right"><b>0.940</b></td><td align="right"><b>0.977</b></td><td align="right"><b>0.950</b></td><td align="right">23.62</td><td align="right"><b>10.69</b></td><td align="right"><b>16.77</b></td><td align="right"><b>0.073</b></td><td align="right"><b>2.39</b></td></tr>
+</tbody>
+</table>
 
 Read this table together with the second entry in [Known limits](#️-known-limits). On **HOT3D**, zero-shot MINT is the best comparable row on detection, MPJPE-p, PA-MPJPE-p, GO-p and CT-p, and `MINT + UKF` has the lowest jitter in the table including the reference row. On **ARCTIC**, its camera-frame joint error is clearly behind the dedicated single-task reconstructors. Overall that places the released checkpoint **close to the state of the art on camera-frame hands rather than at it**, and the reason is structural: this checkpoint's hand branch is trained only on coarse EgoPipeline pseudo-labels and was never fine-tuned on high-precision camera-frame hand data, so it approaches its teacher's accuracy without exceeding it. We report both benchmarks rather than the favourable one.
 
