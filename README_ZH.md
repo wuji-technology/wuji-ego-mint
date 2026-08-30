@@ -14,9 +14,9 @@
 
 <h2>MINT：用可扩展的第一视角管线监督<br>训练世界坐标系相机与手部运动的统一模型</h2>
 
-Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Yizhou Wang<sup>1,3</sup> &nbsp;·&nbsp; Zhenjie Yang<sup>4</sup> &nbsp;·&nbsp; Jiahao Chen<sup>3,\*</sup> &nbsp;·&nbsp; Guanqi He<sup>2,3,\*</sup>
+Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Yizhou Wang<sup>1,3</sup> &nbsp;·&nbsp; Zhenjie Yang<sup>4</sup> &nbsp;·&nbsp; Yide Liu<sup>3,5</sup> &nbsp;·&nbsp; Jiahao Chen<sup>3,\*</sup> &nbsp;·&nbsp; Guanqi He<sup>2,3,\*</sup>
 
-<sub><sup>1</sup>上海科技大学 &nbsp;&nbsp;<sup>2</sup>清华大学 &nbsp;&nbsp;<sup>3</sup>舞肌科技 &nbsp;&nbsp;<sup>4</sup>香港大学 &nbsp;&nbsp;<sup>\*</sup>通讯作者</sub>
+<sub><sup>1</sup>上海科技大学 &nbsp;&nbsp;<sup>2</sup>清华大学 &nbsp;&nbsp;<sup>3</sup>舞肌科技 &nbsp;&nbsp;<sup>4</sup>香港大学 &nbsp;&nbsp;<sup>5</sup>浙江大学 &nbsp;&nbsp;<sup>\*</sup>通讯作者</sub>
 
 <!-- TODO：arXiv 链接上线后填进下面这个 badge。 -->
 [![arXiv](https://img.shields.io/badge/arXiv-coming_soon-b31b1b)]()
@@ -52,8 +52,8 @@ Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Y
 
 ## 📑 目录
 
-<details>
-<summary>点击展开</summary>
+<details open>
+<summary>点击收起</summary>
 
 - [📰 更新](#-更新)
 - [📋 发布状态](#-发布状态)
@@ -101,7 +101,7 @@ Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Y
 | ✅ | EgoPipeline 调度、清理与 LeRobot 导出参考实现 | `ray_pipeline/` |
 | ✅ | Wuji 灵巧手 URDF/MJCF/STL 与重定向 | `eval/simulate/wuji-retargeting/` |
 | ✅ | HOT3D / ARCTIC 零样本结果表（论文 Table 1） | [相机系下的双手重建](#相机系下的双手重建) |
-| ⏳ | 已发布数据的尺度校正相机轨迹 | 见 [已知局限](#️-已知局限) |
+| ⏳ | 相机轨迹的尺度校正版本 —— 已发布数据集中的相机轨迹存在尺度放大 | 校正后的版本尚未发布；现有轨迹可用于预训练，不可用于米制评测，成因见[公开 Ego 预训练数据](#️-公开-ego-预训练数据) |
 | ❌ | 受许可证限制的管线适配（改动过的 HaWoR 源码、权重、MANO） | 不能再分发，见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) |
 
 ## 🚀 快速开始：Web Viewer
@@ -419,7 +419,7 @@ wuji-ego-mint 原创代码使用 MIT License。上游模型、数据集、MANO �
   title  = {MINT: Minting a Unified Model for World-Space Camera and Hand Motion
             from Scalable Egocentric Pipeline Supervision},
   author = {Zhu, Zijie and Cai, Weiren and Wang, Yizhou and Yang, Zhenjie and
-            Chen, Jiahao and He, Guanqi},
+            Liu, Yide and Chen, Jiahao and He, Guanqi},
   year   = {2026},
   note   = {Manuscript under review}
 }
