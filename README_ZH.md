@@ -194,19 +194,23 @@ Viewer 启动后会自动在默认浏览器打开 `http://127.0.0.1:8011`，然�
 <table>
 <thead>
 <tr>
-  <th align="left">方法</th>
+  <th rowspan="2" align="left">方法</th>
+  <th colspan="3" align="center">单卡</th>
+  <th colspan="3" align="center">四卡</th>
+</tr>
+<tr>
+  <th align="right">时间 ↓<br><sub>ms/帧</sub></th>
+  <th align="right">fps ↑</th>
+  <th align="right">加速比 ↑<br><sub>相对 VITRA</sub></th>
   <th align="right">时间 ↓<br><sub>ms/帧</sub></th>
   <th align="right">fps ↑</th>
   <th align="right">加速比 ↑<br><sub>相对 VITRA</sub></th>
 </tr>
 </thead>
 <tbody>
-<tr><th colspan="4" align="left">单卡</th></tr>
-<tr><td align="left">VITRA</td><td align="right">1260.0</td><td align="right">0.8</td><td align="right">—</td></tr>
-<tr><td align="left">MINT</td><td align="right"><b>72.4</b></td><td align="right"><b>13.8</b></td><td align="right"><b>17.4×</b></td></tr>
-<tr><th colspan="4" align="left">四卡</th></tr>
-<tr><td align="left">EgoPipeline</td><td align="right">83.4</td><td align="right">12.0</td><td align="right">3.4×</td></tr>
-<tr><td align="left">MINT</td><td align="right"><b>22.7</b></td><td align="right"><b>44.1</b></td><td align="right"><b>12.5×</b></td></tr>
+<tr><td align="left">VITRA</td><td align="right">1260.0</td><td align="right">0.8</td><td align="right">—</td><td align="right">—</td><td align="right">—</td><td align="right">—</td></tr>
+<tr><td align="left">EgoPipeline</td><td align="right">—</td><td align="right">—</td><td align="right">—</td><td align="right">83.4</td><td align="right">12.0</td><td align="right">3.4×</td></tr>
+<tr><td align="left">MINT</td><td align="right"><b>72.4</b></td><td align="right"><b>13.8</b></td><td align="right"><b>17.4×</b></td><td align="right"><b>22.7</b></td><td align="right"><b>44.1</b></td><td align="right"><b>12.5×</b></td></tr>
 </tbody>
 </table>
 
@@ -322,7 +326,7 @@ EgoPipeline 自己也做过分布式优化（Ray 多卡算子、常驻 worker、
 
 **ARCTIC** 上 MINT 的 RPE-T 全表最低（均值 3.39 mm，次优的外部方法 8.73 mm），RPE-R 均值 0.256 也低于所有外部方法（次优 HaWoR 0.298）。**HOT3D** 上 RPE-T 4.69 mm 排第二，仅次于 MegaSaM 的 3.18 mm，而 MegaSaM 27 条只跑完 24 条；这个数据集上的 RPE-R 落后于 MegaSaM 和 DROID-SLAM。
 
-**ATE 上 MINT 不占优**：HOT3D 181.7 mm，DROID-SLAM 49.1 mm。原因看弧长比：HOT3D 1.094、ARCTIC 1.412，说明预测出的轨迹比真实的长，也就是[已知局限](#️-已知局限)里说的尺度放大。Stage 2 就是修这个的：没有它，HOT3D 的弧长比只有 0.466，偏短很多；Stage 2 把它拉到 1.094，在 ARCTIC 上则修过了头。
+**ATE 上 MINT 不占优**：HOT3D 181.7 mm，DROID-SLAM 49.1 mm。原因看弧长比：HOT3D 1.094、ARCTIC 1.412，说明预测出的轨迹比真实的长，也就是[已知局限](#️-已知局限)里说的尺度放大。Stage 2 就是修这个的：HOT3D 上它把弧长比从 0.466 拉到 1.094，ATE 从 524.7 mm 降到 181.7 mm。尽管在 ARCTIC 上这一项略有下降，但模型的相机轨迹泛化能力更好。
 
 ### 评测协议
 
@@ -415,7 +419,7 @@ Stage 2 配置中的 `train.init_from` 已指向 Stage 1 的 `step_00019000/mode
 | 来源 | Ego4D 332.874 h · EPIC-KITCHENS-100 55.194 h · EgoDex 633.446 h |
 | 通过率 | 1,729 原始小时的 59.1 % |
 
-这个通过率是整条链累计下来的结果，不是某一道规则的效果：视频规格化、[无手与超过两只手的区间被切除](ego_pipeline/preprocessing/)、片段过短被丢弃、管线各级的失败与超时，以及轨迹清理阶段的离群剔除，都会减少最终保留量。最后一步 —— 把清理后的结果打包成训练用的 LeRobot 数据集 —— 在内部仓库中完成，不随本仓库发布，所以这里只给出总的通过率，无法逐级拆分每道规则各筛掉多少。
+这个通过率是整条链累计下来的结果，不是某一道规则的效果：[视频规格化、无手与超过两只手的区间被切除、片段过短被丢弃](ego_pipeline/preprocessing/)、管线各级的失败与超时，以及轨迹清理阶段的离群剔除，都会减少最终保留量。最后一步 —— 把清理后的结果打包成训练用的 LeRobot 数据集 —— 在内部仓库中完成，不随本仓库发布，所以这里只给出总的通过率，无法逐级拆分每道规则各筛掉多少。
 
 > **重要说明：这些数据中的相机轨迹由本仓库的 Ego 数据管线处理生成，当前存在明显的尺度放大现象。建议仅将其用于本项目 Ego 手部重建模型的预训练，不建议用于真实尺度评估、精确相机轨迹评测或作为真实尺度 Ground Truth。**
 
