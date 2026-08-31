@@ -1,19 +1,27 @@
 <div align="center">
 
 <!--
-  FULL FILM (1 min 41 s) — the promo film opens the README, above the hero
-  wall. Source: `out/MINT_full_en.mp4` in the promo project, 1920 × 1080,
-  72 MB, kept out of this repository on purpose. GitHub renders an inline
-  player only for github.com/user-attachments URLs, and those can only be
-  minted through the browser: open any issue or PR comment box in this
-  repository, drag the MP4 into it, copy the generated
+  FULL FILM (1 min 49 s) — the hero wall below doubles as the film's poster:
+  it links to `assets/readme/full_film.mp4` (1280 × 720, 8.5 MB, committed),
+  which GitHub plays in its own blob viewer.
+
+  A true *inline* player is only rendered for github.com/user-attachments
+  URLs, and those can only be minted through the browser: open any issue or PR
+  comment box in this repository, drag the MP4 into it, copy the generated
   https://github.com/user-attachments/assets/...
-  link, and paste it on its own line right below this comment. Do not commit
-  the MP4 — a <video> tag pointing at a file in the repository is stripped by
-  GitHub's markdown sanitizer and renders as nothing.
+  link and paste it on its own line right below this comment — that is the
+  upgrade path if the film should ever play without a click. A <video> tag
+  pointing at a file in this repository is stripped by GitHub's markdown
+  sanitizer and renders as nothing, so the poster link is the best in-repo
+  option.
+
+  Full-quality master: `out/MINT_full_en_music.mp4` in the promo project,
+  1920 × 1080, 76 MB, deliberately not committed.
 -->
 
-<img src="assets/readme/scale.webp" width="100%" alt="108 MINT renders playing at once, one tile per clip">
+<a href="assets/readme/full_film.mp4"><img src="assets/readme/scale.webp" width="100%" alt="108 MINT renders playing at once, one tile per clip — click to play the full film"></a>
+
+<sub>▶ <a href="assets/readme/full_film.mp4"><b>Play the full film</b></a> &nbsp;·&nbsp; 1 min 49 s</sub>
 
 <h2>MINT: Minting a Unified Model for World-Space Camera and Hand Motion<br>from Scalable Egocentric Pipeline Supervision</h2>
 
