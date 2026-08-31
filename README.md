@@ -35,8 +35,6 @@ Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Y
 
 <img src="assets/readme/world_space.webp" width="100%" alt="Eight panels: device ground truth beside MINT prediction in the ego view, in world space, and retargeted to the Wuji hand in MuJoCo">
 
-<div align="center"><sub>One monocular egocentric clip from <b>HOT3D</b> — sample results. Left of each pair is device ground truth, right is MINT's prediction: ego-view MANO, world-space camera and two-hand trajectory, and the same trajectory retargeted to the Wuji hand in MuJoCo. Single forward pass, no per-sequence optimisation, no test-time tuning.</sub></div>
-
 ---
 
 ### 🤲 Meet MINT — world-space camera and bimanual motion, from one RGB video, in one forward pass
@@ -58,7 +56,6 @@ Activity understanding, robot imitation and AR all want the same thing: **where 
 <details open>
 <summary>Collapse</summary>
 
-- [📰 News](#-news)
 - [📋 Release status](#-release-status)
 - [🚀 Quick Start: Web Viewer](#-quick-start-web-viewer)
   - [Model and asset locations](#model-and-asset-locations)
@@ -69,6 +66,7 @@ Activity understanding, robot imitation and AR all want the same thing: **where 
   - [Why one model instead of the chain](#why-one-model-instead-of-the-chain)
 - [📊 What MINT is measured on](#-what-mint-is-measured-on)
   - [Camera-frame bimanual reconstruction](#camera-frame-bimanual-reconstruction)
+  - [World-frame camera trajectory](#world-frame-camera-trajectory)
   - [Protocol](#protocol)
 - [📦 What is included](#-what-is-included)
 - [🏋️ Training and optional pipeline reconstruction](#️-training-and-optional-pipeline-reconstruction)
@@ -85,13 +83,6 @@ Activity understanding, robot imitation and AR all want the same thing: **where 
 </details>
 
 ---
-
-## 📰 News
-
-- **2026-08-19** — Prediction labels unified across every Viewer visualization, so GT/prediction panels can no longer be confused with one another.
-- **2026-08-18** — Viewer rendering refined and UKF smoothing controls exposed in the panel.
-- **2026-08-16** — Benchmark panel published inside the Viewer, Wuji hand retargeting shipped (`eval/simulate/wuji-retargeting`), and the approved two-episode Hot3D LeRobot v3 sample bundled.
-- **2026-08-15** — First public release: inference and training code, the checkpoint download workflow, and the 1,021-hour structured dataset on Hugging Face and ModelScope.
 
 ## 📋 Release status
 
@@ -279,27 +270,27 @@ Table 1 of the paper, reproduced verbatim. Every row is scored under the **cover
 </thead>
 <tbody>
 <tr><th colspan="9" align="left">ARCTIC</th></tr>
-<tr><td align="left">InterWild [16]</td><td align="right">0.878</td><td align="right">0.943</td><td align="right">0.959</td><td align="right">30.82</td><td align="right">15.95</td><td align="right">25.39</td><td align="right">0.097</td><td align="right">46.58</td></tr>
-<tr><td align="left">HaMeR [18]</td><td align="right">0.875</td><td align="right">0.943</td><td align="right">0.957</td><td align="right">29.20</td><td align="right">14.60</td><td align="right">24.91</td><td align="right">0.095</td><td align="right">18.28</td></tr>
-<tr><td align="left">Hamba [5]</td><td align="right">0.833</td><td align="right">0.912</td><td align="right">0.941</td><td align="right">31.23</td><td align="right">17.17</td><td align="right">27.82</td><td align="right">0.110</td><td align="right">15.36</td></tr>
-<tr><td align="left">WildHands [20]</td><td align="right">0.879</td><td align="right">0.946</td><td align="right">0.960</td><td align="right">25.70</td><td align="right">13.94</td><td align="right">22.32</td><td align="right"><b>0.058</b></td><td align="right">12.97</td></tr>
-<tr><td align="left">OmniHands [15]</td><td align="right">0.866</td><td align="right">0.949</td><td align="right">0.954</td><td align="right">29.67</td><td align="right">14.20</td><td align="right">24.58</td><td align="right">0.087</td><td align="right">45.31</td></tr>
-<tr><td align="left">WiLoR [19]</td><td align="right"><b>0.919</b></td><td align="right">0.951</td><td align="right">0.974</td><td align="right"><b>22.01</b></td><td align="right"><b>11.87</b></td><td align="right"><b>17.36</b></td><td align="right">0.075</td><td align="right">24.09</td></tr>
-<tr><td align="left">Dyn-HaMR [37]</td><td align="right">0.842</td><td align="right">0.918</td><td align="right">0.951</td><td align="right">27.90</td><td align="right">17.02</td><td align="right">25.95</td><td align="right">0.121</td><td align="right">12.84</td></tr>
-<tr><td align="left">HaWoR [39]</td><td align="right">0.700</td><td align="right">0.817</td><td align="right">0.895</td><td align="right">45.36</td><td align="right">26.38</td><td align="right">43.33</td><td align="right">0.149</td><td align="right">19.79</td></tr>
-<tr><td align="left"><i>ViDiHand [33]*</i></td><td align="right"><i>0.997</i></td><td align="right"><i>0.999</i></td><td align="right"><i>0.999</i></td><td align="right"><i>21.67</i></td><td align="right"><i>9.82</i></td><td align="right"><i>14.64</i></td><td align="right"><i>0.047</i></td><td align="right"><i>3.18</i></td></tr>
+<tr><td align="left">InterWild</td><td align="right">0.878</td><td align="right">0.943</td><td align="right">0.959</td><td align="right">30.82</td><td align="right">15.95</td><td align="right">25.39</td><td align="right">0.097</td><td align="right">46.58</td></tr>
+<tr><td align="left">HaMeR</td><td align="right">0.875</td><td align="right">0.943</td><td align="right">0.957</td><td align="right">29.20</td><td align="right">14.60</td><td align="right">24.91</td><td align="right">0.095</td><td align="right">18.28</td></tr>
+<tr><td align="left">Hamba</td><td align="right">0.833</td><td align="right">0.912</td><td align="right">0.941</td><td align="right">31.23</td><td align="right">17.17</td><td align="right">27.82</td><td align="right">0.110</td><td align="right">15.36</td></tr>
+<tr><td align="left">WildHands</td><td align="right">0.879</td><td align="right">0.946</td><td align="right">0.960</td><td align="right">25.70</td><td align="right">13.94</td><td align="right">22.32</td><td align="right"><b>0.058</b></td><td align="right">12.97</td></tr>
+<tr><td align="left">OmniHands</td><td align="right">0.866</td><td align="right">0.949</td><td align="right">0.954</td><td align="right">29.67</td><td align="right">14.20</td><td align="right">24.58</td><td align="right">0.087</td><td align="right">45.31</td></tr>
+<tr><td align="left">WiLoR</td><td align="right"><b>0.919</b></td><td align="right">0.951</td><td align="right">0.974</td><td align="right"><b>22.01</b></td><td align="right"><b>11.87</b></td><td align="right"><b>17.36</b></td><td align="right">0.075</td><td align="right">24.09</td></tr>
+<tr><td align="left">Dyn-HaMR</td><td align="right">0.842</td><td align="right">0.918</td><td align="right">0.951</td><td align="right">27.90</td><td align="right">17.02</td><td align="right">25.95</td><td align="right">0.121</td><td align="right">12.84</td></tr>
+<tr><td align="left">HaWoR</td><td align="right">0.700</td><td align="right">0.817</td><td align="right">0.895</td><td align="right">45.36</td><td align="right">26.38</td><td align="right">43.33</td><td align="right">0.149</td><td align="right">19.79</td></tr>
+<tr><td align="left"><i>ViDiHand*</i></td><td align="right"><i>0.997</i></td><td align="right"><i>0.999</i></td><td align="right"><i>0.999</i></td><td align="right"><i>21.67</i></td><td align="right"><i>9.82</i></td><td align="right"><i>14.64</i></td><td align="right"><i>0.047</i></td><td align="right"><i>3.18</i></td></tr>
 <tr><td align="left">MINT</td><td align="right">0.916</td><td align="right"><b>0.957</b></td><td align="right"><b>0.978</b></td><td align="right">51.03</td><td align="right">27.71</td><td align="right">24.19</td><td align="right">0.140</td><td align="right">12.26</td></tr>
 <tr><td align="left">MINT + UKF</td><td align="right">0.916</td><td align="right"><b>0.957</b></td><td align="right"><b>0.978</b></td><td align="right">51.09</td><td align="right">27.70</td><td align="right">24.22</td><td align="right">0.140</td><td align="right"><b>2.54</b></td></tr>
 <tr><th colspan="9" align="left">HOT3D</th></tr>
-<tr><td align="left">InterWild [16]</td><td align="right">0.669</td><td align="right">0.881</td><td align="right">0.868</td><td align="right">77.17</td><td align="right">24.81</td><td align="right">58.50</td><td align="right">0.213</td><td align="right">101.16</td></tr>
-<tr><td align="left">HaMeR [18]</td><td align="right">0.692</td><td align="right">0.904</td><td align="right">0.883</td><td align="right">68.31</td><td align="right">21.46</td><td align="right">49.64</td><td align="right">0.102</td><td align="right">23.63</td></tr>
-<tr><td align="left">Hamba [5]</td><td align="right">0.632</td><td align="right">0.828</td><td align="right">0.853</td><td align="right">71.73</td><td align="right">29.62</td><td align="right">56.53</td><td align="right">0.128</td><td align="right">18.51</td></tr>
-<tr><td align="left">WildHands [20]</td><td align="right">0.655</td><td align="right">0.863</td><td align="right">0.844</td><td align="right">52.79</td><td align="right">28.95</td><td align="right">53.93</td><td align="right">0.157</td><td align="right">22.89</td></tr>
-<tr><td align="left">OmniHands [15]</td><td align="right">0.649</td><td align="right">0.895</td><td align="right">0.868</td><td align="right">63.28</td><td align="right">22.68</td><td align="right">49.12</td><td align="right">0.133</td><td align="right">69.51</td></tr>
-<tr><td align="left">WiLoR [19]</td><td align="right">0.827</td><td align="right">0.897</td><td align="right">0.937</td><td align="right">30.97</td><td align="right">19.98</td><td align="right">25.75</td><td align="right">0.098</td><td align="right">17.98</td></tr>
-<tr><td align="left">Dyn-HaMR [37]</td><td align="right">0.614</td><td align="right">0.811</td><td align="right">0.802</td><td align="right">74.21</td><td align="right">38.20</td><td align="right">43.85</td><td align="right">0.571</td><td align="right">44.94</td></tr>
-<tr><td align="left">HaWoR [39]</td><td align="right">0.348</td><td align="right">0.499</td><td align="right">0.654</td><td align="right">71.40</td><td align="right">66.03</td><td align="right">79.35</td><td align="right">0.262</td><td align="right">23.87</td></tr>
-<tr><td align="left"><i>ViDiHand [33]*</i></td><td align="right"><i>0.948</i></td><td align="right"><i>0.974</i></td><td align="right"><i>0.983</i></td><td align="right"><i>21.51</i></td><td align="right"><i>11.38</i></td><td align="right"><i>15.83</i></td><td align="right"><i>0.040</i></td><td align="right"><i>3.74</i></td></tr>
+<tr><td align="left">InterWild</td><td align="right">0.669</td><td align="right">0.881</td><td align="right">0.868</td><td align="right">77.17</td><td align="right">24.81</td><td align="right">58.50</td><td align="right">0.213</td><td align="right">101.16</td></tr>
+<tr><td align="left">HaMeR</td><td align="right">0.692</td><td align="right">0.904</td><td align="right">0.883</td><td align="right">68.31</td><td align="right">21.46</td><td align="right">49.64</td><td align="right">0.102</td><td align="right">23.63</td></tr>
+<tr><td align="left">Hamba</td><td align="right">0.632</td><td align="right">0.828</td><td align="right">0.853</td><td align="right">71.73</td><td align="right">29.62</td><td align="right">56.53</td><td align="right">0.128</td><td align="right">18.51</td></tr>
+<tr><td align="left">WildHands</td><td align="right">0.655</td><td align="right">0.863</td><td align="right">0.844</td><td align="right">52.79</td><td align="right">28.95</td><td align="right">53.93</td><td align="right">0.157</td><td align="right">22.89</td></tr>
+<tr><td align="left">OmniHands</td><td align="right">0.649</td><td align="right">0.895</td><td align="right">0.868</td><td align="right">63.28</td><td align="right">22.68</td><td align="right">49.12</td><td align="right">0.133</td><td align="right">69.51</td></tr>
+<tr><td align="left">WiLoR</td><td align="right">0.827</td><td align="right">0.897</td><td align="right">0.937</td><td align="right">30.97</td><td align="right">19.98</td><td align="right">25.75</td><td align="right">0.098</td><td align="right">17.98</td></tr>
+<tr><td align="left">Dyn-HaMR</td><td align="right">0.614</td><td align="right">0.811</td><td align="right">0.802</td><td align="right">74.21</td><td align="right">38.20</td><td align="right">43.85</td><td align="right">0.571</td><td align="right">44.94</td></tr>
+<tr><td align="left">HaWoR</td><td align="right">0.348</td><td align="right">0.499</td><td align="right">0.654</td><td align="right">71.40</td><td align="right">66.03</td><td align="right">79.35</td><td align="right">0.262</td><td align="right">23.87</td></tr>
+<tr><td align="left"><i>ViDiHand*</i></td><td align="right"><i>0.948</i></td><td align="right"><i>0.974</i></td><td align="right"><i>0.983</i></td><td align="right"><i>21.51</i></td><td align="right"><i>11.38</i></td><td align="right"><i>15.83</i></td><td align="right"><i>0.040</i></td><td align="right"><i>3.74</i></td></tr>
 <tr><td align="left">MINT</td><td align="right"><b>0.940</b></td><td align="right"><b>0.977</b></td><td align="right"><b>0.950</b></td><td align="right"><b>23.61</b></td><td align="right">10.70</td><td align="right">16.78</td><td align="right"><b>0.073</b></td><td align="right">11.52</td></tr>
 <tr><td align="left">MINT + UKF</td><td align="right"><b>0.940</b></td><td align="right"><b>0.977</b></td><td align="right"><b>0.950</b></td><td align="right">23.62</td><td align="right"><b>10.69</b></td><td align="right"><b>16.77</b></td><td align="right"><b>0.073</b></td><td align="right"><b>2.39</b></td></tr>
 </tbody>
@@ -310,6 +301,56 @@ Read this table together with the second entry in [Known limits](#️-known-limi
 **The row that actually tests the claim is HaWoR** — the hand-reconstruction stage inside EgoPipeline, and therefore the teacher that produced every hand label this checkpoint was trained on. A student trained on pseudo-labels cannot be expected to beat the process that generated them; matching it is the result being asked for. MINT matches or passes it: on ARCTIC, better global orientation (24.19 vs 43.33 deg) and translation (0.140 vs 0.149 m) with comparable Procrustes-aligned joint error (27.71 vs 26.38 mm); on HOT3D, better on every one of the eight metrics, by wide margins (MPJPE-p 23.61 vs 71.40 mm, F1 0.950 vs 0.654). One unified model, in one forward pass, reproduces the structured output of the cascade it was distilled from — at a fraction of its cost.
 
 That is what makes the remaining gap a **data problem rather than an architectural one**. The ceiling on camera-frame hand accuracy is the pseudo-label quality, not the model: the same architecture fine-tuned on high-precision camera-frame hand data should produce a MINT that emits high-precision labels, and that fine-tune is the next step, not a redesign.
+
+### World-frame camera trajectory
+
+Table 2 of the paper: HOT3D (27 sequences, 94,978 frames) and the ARCTIC P2 validation split (34 sequences, 25,883 frames). Sequences are evaluated at **full length, with SE(3)-only alignment and no fitted scale** — so scale error is charged rather than absorbed, and the arc-length ratio is what exposes it. Coverage is how many sequences a method completed: `MegaSaM†` runs without depth refinement and runs out of memory on the three longest HOT3D sequences. `MINT w/o stage 2` never sees metric ground truth. Bold marks the best value in each column; for the arc-length ratio, best means closest to 1.
+
+<table>
+<thead>
+<tr>
+  <th rowspan="2" align="left">Method</th>
+  <th rowspan="2" align="right">Cov.<br><sub>seq.</sub></th>
+  <th colspan="2" align="center">ATE ↓ (mm)</th>
+  <th colspan="2" align="center">RPE-T ↓ (mm)</th>
+  <th colspan="2" align="center">RPE-R ↓ (deg)</th>
+  <th rowspan="2" align="right">Arc len.<br><sub>ratio → 1</sub></th>
+  <th rowspan="2" align="right">ATE ↓<br><sub>%</sub></th>
+</tr>
+<tr>
+  <th align="right">mean</th>
+  <th align="right">med.</th>
+  <th align="right">mean</th>
+  <th align="right">med.</th>
+  <th align="right">mean</th>
+  <th align="right">med.</th>
+</tr>
+</thead>
+<tbody>
+<tr><th colspan="10" align="left">HOT3D</th></tr>
+<tr><td align="left">DROID-SLAM</td><td align="right">27/27</td><td align="right"><b>49.1</b></td><td align="right"><b>39.6</b></td><td align="right">5.36</td><td align="right">3.52</td><td align="right">0.227</td><td align="right">0.146</td><td align="right">0.778</td><td align="right"><b>0.36</b></td></tr>
+<tr><td align="left">HaWoR</td><td align="right">27/27</td><td align="right">200.3</td><td align="right">179.2</td><td align="right">8.60</td><td align="right">7.33</td><td align="right">1.098</td><td align="right">0.928</td><td align="right"><b>0.950</b></td><td align="right">1.28</td></tr>
+<tr><td align="left">InfiniteVGGT</td><td align="right">27/27</td><td align="right">124.8</td><td align="right">100.0</td><td align="right">13.52</td><td align="right">9.67</td><td align="right">1.492</td><td align="right">0.392</td><td align="right">0.556</td><td align="right">0.80</td></tr>
+<tr><td align="left">LingBot-Map</td><td align="right">27/27</td><td align="right">85.5</td><td align="right">51.0</td><td align="right">7.56</td><td align="right">6.18</td><td align="right">0.684</td><td align="right">0.253</td><td align="right">0.712</td><td align="right">0.55</td></tr>
+<tr><td align="left">MegaSaM†</td><td align="right">24/27</td><td align="right">94.4</td><td align="right">65.3</td><td align="right"><b>3.18</b></td><td align="right"><b>2.13</b></td><td align="right"><b>0.082</b></td><td align="right"><b>0.063</b></td><td align="right">0.716</td><td align="right">0.69</td></tr>
+<tr><td align="left">MINT w/o stage 2</td><td align="right">27/27</td><td align="right">524.7</td><td align="right">434.6</td><td align="right">8.75</td><td align="right">8.37</td><td align="right">0.234</td><td align="right">0.229</td><td align="right">0.466</td><td align="right">3.29</td></tr>
+<tr><td align="left">MINT</td><td align="right">27/27</td><td align="right">181.7</td><td align="right">155.5</td><td align="right">4.69</td><td align="right">4.78</td><td align="right">0.284</td><td align="right">0.259</td><td align="right">1.094</td><td align="right">1.15</td></tr>
+<tr><th colspan="10" align="left">ARCTIC</th></tr>
+<tr><td align="left">DROID-SLAM</td><td align="right">34/34</td><td align="right">181.5</td><td align="right">49.6</td><td align="right">33.84</td><td align="right">14.25</td><td align="right">1.006</td><td align="right">0.423</td><td align="right"><b>0.964</b></td><td align="right">8.07</td></tr>
+<tr><td align="left">HaWoR</td><td align="right">34/34</td><td align="right">66.2</td><td align="right"><b>29.4</b></td><td align="right">24.08</td><td align="right">4.16</td><td align="right">0.298</td><td align="right"><b>0.151</b></td><td align="right">0.759</td><td align="right">2.87</td></tr>
+<tr><td align="left">InfiniteVGGT</td><td align="right">34/34</td><td align="right">79.0</td><td align="right">69.1</td><td align="right">16.21</td><td align="right">12.63</td><td align="right">1.265</td><td align="right">0.655</td><td align="right">0.284</td><td align="right">3.23</td></tr>
+<tr><td align="left">LingBot-Map</td><td align="right">34/34</td><td align="right">59.6</td><td align="right">62.0</td><td align="right">9.17</td><td align="right">8.47</td><td align="right">0.980</td><td align="right">0.717</td><td align="right">0.591</td><td align="right">2.46</td></tr>
+<tr><td align="left">MegaSaM†</td><td align="right">34/34</td><td align="right"><b>51.4</b></td><td align="right">50.4</td><td align="right">8.73</td><td align="right">5.58</td><td align="right">0.779</td><td align="right">0.725</td><td align="right">1.956</td><td align="right"><b>2.15</b></td></tr>
+<tr><td align="left">MINT w/o stage 2</td><td align="right">34/34</td><td align="right">63.7</td><td align="right">59.3</td><td align="right">3.53</td><td align="right">3.62</td><td align="right"><b>0.251</b></td><td align="right">0.243</td><td align="right">0.755</td><td align="right">2.63</td></tr>
+<tr><td align="left">MINT</td><td align="right">34/34</td><td align="right">81.9</td><td align="right">83.2</td><td align="right"><b>3.39</b></td><td align="right"><b>3.37</b></td><td align="right">0.256</td><td align="right">0.251</td><td align="right">1.412</td><td align="right">3.40</td></tr>
+</tbody>
+</table>
+
+**RPE-T and RPE-R are the metrics that matter for this model.** MINT exists to produce egocentric labels, those labels are consumed as training data, and training consumes camera motion as per-frame deltas rather than as an absolute pose in a global frame. Relative pose error is what propagates into whatever is trained on the output; ATE measures accumulated global drift that a delta-consuming trainer never sees.
+
+On those two metrics: on **ARCTIC**, MINT has the lowest RPE-T in the table — 3.39 mm mean against 8.73 mm for the best external method — and the lowest RPE-R mean among external methods (0.256 vs HaWoR's 0.298). On **HOT3D**, RPE-T is second at 4.69 mm behind MegaSaM's 3.18 mm, and MegaSaM completes only 24 of 27 sequences; RPE-R there trails both MegaSaM and DROID-SLAM.
+
+The other side, stated plainly: **ATE is not where this checkpoint wins** — 181.7 mm on HOT3D against DROID-SLAM's 49.1 mm — and the arc-length ratio says why. At 1.094 on HOT3D and 1.412 on ARCTIC the predicted path is longer than the real one, which is the scale enlargement recorded in [Known limits](#️-known-limits). Stage 2 is what addresses it: without Stage 2 the ratio is 0.466 on HOT3D, badly short, and Stage 2 pulls it to 1.094 — while over-correcting on ARCTIC. Absolute metric scale is the open problem in this release; relative motion is not.
 
 ### Protocol
 
