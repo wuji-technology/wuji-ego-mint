@@ -208,7 +208,6 @@ Inference throughput measured on **RTX 4090D**, at 512 × 384 and 30 fps under i
 <tr><td align="left">VITRA</td><td align="right">1260.0</td><td align="right">0.8</td><td align="right">—</td></tr>
 <tr><td align="left">MINT</td><td align="right"><b>72.4</b></td><td align="right"><b>13.8</b></td><td align="right"><b>17.4×</b></td></tr>
 <tr><th colspan="4" align="left">Four GPUs</th></tr>
-<tr><td align="left">VITRA</td><td align="right">283.3</td><td align="right">3.5</td><td align="right">—</td></tr>
 <tr><td align="left">EgoPipeline</td><td align="right">83.4</td><td align="right">12.0</td><td align="right">3.4×</td></tr>
 <tr><td align="left">MINT</td><td align="right"><b>22.7</b></td><td align="right"><b>44.1</b></td><td align="right"><b>12.5×</b></td></tr>
 </tbody>
