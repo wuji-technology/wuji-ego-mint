@@ -1,24 +1,22 @@
 <div align="center">
 
 <!--
-  完整宣传片（1 分 49 秒）—— 宣传片放在下面的封面视频墙「之后」，单独一行：链接到
-  assets/readme/full_film.mp4（1280 × 720，8.5 MB，已入库），GitHub 会在自己的
-  blob 页面里播放。封面视频墙保持为独立的图片，不要把它并进宣传片的链接里。
+  完整宣传片（1 分 49 秒）—— 这里暂时特意不放播放入口。文件已入库，位于
+  assets/readme/full_film.mp4（1280 × 720，8.5 MB）；指向它的普通链接已被移除，
+  因为「点开跳到 blob 页面」的链接不算播放器。
 
-  真正的「内嵌」播放器只对 github.com/user-attachments 链接渲染，而这种链接只能
-  通过浏览器上传获得：在本仓库任意 issue / PR 的评论框里把 MP4 拖进去，复制生成的
-  https://github.com/user-attachments/assets/... 链接，单独一行粘贴到现在
-  「播放完整宣传片」那一行的位置，也就是封面视频墙之后 —— 如果希望宣传片不点击就
-  自动播放，这是升级路径。指向仓库文件的 <video> 标签会被 GitHub 的 markdown
-  过滤器整段删掉，所以链接是入库方案里最好的做法。
+  真正的内嵌播放器只对 github.com/user-attachments 链接渲染，而这种链接只能通过
+  浏览器上传获得：在本仓库任意 issue / PR 的评论框里把 MP4 拖进去，复制生成的
+  https://github.com/user-attachments/assets/... 链接，单独一行粘贴到这里，也就是
+  封面视频墙之后。（robbyant/lingbot-map 的六个视频都是这么做的，一个都没入库。）
+  指向仓库文件的 <video> 标签会被 GitHub 的 markdown 过滤器整段删掉，页面上什么
+  都不会显示。
 
   全画质母版：宣传片工程里的 out/MINT_full_en_music.mp4（1920 × 1080，76 MB，
   特意不入库）。
 -->
 
 <img src="assets/readme/scale.webp" width="100%" alt="108 个 MINT 渲染片段同时播放，每格一个片段">
-
-<sub>▶ <a href="assets/readme/full_film.mp4"><b>播放完整宣传片</b></a> &nbsp;·&nbsp; 1 分 49 秒</sub>
 
 <h2>MINT：用可扩展的第一视角管线监督<br>训练世界坐标系相机与手部运动的统一模型</h2>
 
