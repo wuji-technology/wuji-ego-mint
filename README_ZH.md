@@ -62,7 +62,6 @@ MINT 把这条链换掉：**一段普通 RGB 视频、一张 24 GB 显存的显�
 - [📦 功能范围](#-功能范围)
 - [🏋️ 模型训练与可选管线复现](#️-模型训练与可选管线复现)
 - [🗂️ 公开 Ego 预训练数据](#️-公开-ego-预训练数据)
-- [🔐 LeRobot 样例与隐私](#-lerobot-样例与隐私)
 - [⚠️ 已知局限](#️-已知局限)
 - [🧾 仓库结构](#-仓库结构)
 - [📚 文档](#-文档)
@@ -393,7 +392,7 @@ GeoCalib、MoGe 和 Mega-SAM 的源码快照位于 `third_party/`，但生产管
 
 ### 训练模型
 
-训练配置只保留与两个指定 checkpoint 对应的两阶段配置。`step_00019000` 是 Stage 1；`step_00004500` 是从 Stage 1 权重初始化、仅训练 WorldEngine 相机头的 Stage 2，也是微调完成后开源发布的最终模型 checkpoint：
+训练配置只保留两阶段各一份。Stage 1 在管线监督上预训练；Stage 2 从 Stage 1 的权重初始化，只训练 WorldEngine 相机头，它的产物就是本次开源发布的 checkpoint：
 
 ```bash
 python -m mint train --config configs/training/mint_step1.yaml
@@ -401,7 +400,7 @@ python -m mint train --config configs/training/mint_step1.yaml
 python -m mint train --config configs/training/mint_step2.yaml
 ```
 
-Stage 2 配置中的 `train.init_from` 已指向 Stage 1 的 `step_00019000/model.safetensors`。
+Stage 2 配置里的 `train.init_from` 需要改成你自己 Stage 1 产出的 `model.safetensors` 路径。
 
 `mint train` 消费由使用者单独准备的兼容 LeRobot 数据集并产出训练 checkpoint。训练完成后，可直接在 Viewer 面板中选择并检查新的 checkpoint。
 
@@ -424,20 +423,6 @@ Stage 2 配置中的 `train.init_from` 已指向 Stage 1 的 `step_00019000/mode
 > **重要说明：这些数据中的相机轨迹由本仓库的 Ego 数据管线处理生成，当前存在明显的尺度放大现象。建议仅将其用于本项目 Ego 手部重建模型的预训练，不建议用于真实尺度评估、精确相机轨迹评测或作为真实尺度 Ground Truth。**
 
 公开数据集不包含 `.mp4` 视频。原始视频分别来自 Ego4D、EgoDex 和 EPIC-KITCHENS，受各自数据集许可证及访问条款约束，无法由本项目重新分发。需要视频的使用者应从对应数据集官方渠道申请和下载，并自行确认使用与再分发权限。
-
-## 🔐 LeRobot 样例与隐私
-
-仓库只保留 `data/samples/lerobot_v3/` 这一套小样例：从排序后的 Hot3D 序列 export 中选择 8 段操作内容不同的片段，各截取居中 15 秒，合成一个合法的 **8 episode、3,600 帧** LeRobot v3 数据集 —— 512 × 512、30 fps、磁盘占用 21 MB，包含同步 H.264 视频、Hot3D 相机与双手标注、任务文本和 episode 元数据。样例不记录参与者 ID 或原始序列名，只在 `lerobot_v3/sample_manifest.json` 里保留匿名来源索引和居中帧范围。
-
-可从本地已有的完整 export 重建：
-
-```bash
-python scripts/build_sample_lerobot.py \
-  --source-root /path/to/hot3d_to_lerobot \
-  --output data/samples/lerobot_v3
-```
-
-能够获取数据不等于拥有再次分发的权利；发布者仍需确认许可证、参与者授权并完成逐帧隐私检查。详细要求见 [隐私说明](docs/privacy.md)。
 
 ## ⚠️ 已知局限
 
