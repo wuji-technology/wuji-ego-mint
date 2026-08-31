@@ -93,7 +93,7 @@ $PY eval/model_effect/visualization/viewer_web.py \
   页面「模型就绪」状态会显示实际加载的设备。`streaming` 相机有跨帧 KV cache，仍只在主卡执行。
 - 手部窗口模式有三种：`hard` 保留原始硬切，`blend` 使用最多 8 帧重叠做线性渐入/渐出，
   `smooth`（默认，页面显示「融合 + UKF平滑」）先执行同一套 `blend`，再复用
-  `ray_pipeline/data_cleaning/cleaning_modules/ukf_cam_smoothing.py` 最终生产参数的相机系
+  `ego_pipeline/data_cleaning/cleaning_modules/ukf_cam_smoothing.py` 最终生产参数的相机系
   速度自适应 UKF + 无迹 RTS 双向平滑。生产兼容默认仍为 `q=0.6, r=0.6, beta=2.0, rts=1`；
   Viewer 默认采用较弱的 `q=0.7, r=0.5, beta=0.3`，并在「手部拼窗」下允许输入三项参数。
   建议范围为 `q=0.4–1.0, r=0.3–1.0, beta=0.2–3.0`（安全范围分别为 `0.1–2.0, 0.1–2.0, 0–5`）：

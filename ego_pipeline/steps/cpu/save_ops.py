@@ -37,7 +37,7 @@ def clean_and_save(
     cam_c2w=None,
 ) -> tuple[str, float]:
     import joblib
-    from ray_pipeline.data_cleaning.final_clean import final_clean
+    from ego_pipeline.data_cleaning.final_clean import final_clean
 
     result_dir   = Path(result_dir)
     result_dir.mkdir(parents=True, exist_ok=True)

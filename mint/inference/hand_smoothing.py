@@ -3,7 +3,7 @@
 """Offline hand post-processing selected by MINT's production pipeline.
 
 This is the camera-frame equivalent of ``smooth_ukf_cam`` from
-``ray_pipeline/data_cleaning/cleaning_modules/ukf_cam_smoothing.py``. Model
+``ego_pipeline/data_cleaning/cleaning_modules/ukf_cam_smoothing.py``. Model
 hands already use camera-frame MANO parameters, so the world->camera->world
 wrapper from the data-cleaning pipeline cancels out here. The filter itself is
 kept the same: speed-adaptive observation noise, a constant-velocity UKF, and

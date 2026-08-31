@@ -20,7 +20,7 @@ Before attempting a local integration:
    and HaWoR, under their original license terms.
 3. Obtain the required checkpoints, MANO files, and other licensed assets from
    their official sources.
-4. Reconcile the upstream APIs with the contracts in `ray_pipeline/` and keep
+4. Reconcile the upstream APIs with the contracts in `ego_pipeline/` and keep
    any non-redistributable adaptations local. An AI coding assistant may be used
    to help implement this compatibility layer.
 5. Validate the completed local environment before processing any data.

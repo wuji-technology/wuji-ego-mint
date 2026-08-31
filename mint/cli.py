@@ -42,7 +42,7 @@ def main(argv: list[str] | None = None) -> int:
     command, remainder = raw[0], raw[1:]
 
     if command == "pipeline":
-        return _run_script("ray_pipeline/run_batch.py", _normalize_pipeline_args(remainder))
+        return _run_script("ego_pipeline/run_batch.py", _normalize_pipeline_args(remainder))
     if command == "train":
         return _run_script("model_train/train.py", remainder)
     if command == "infer":
