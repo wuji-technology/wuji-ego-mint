@@ -39,50 +39,49 @@ Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Y
 
 ### 🤲 Meet MINT — world-space egocentric hand data anyone can afford to produce
 
-Where the person wearing the camera walked, where each hand went, and what it did there — measured in the real space around them, not in pixels on the screen. Anything that has to understand what someone is doing, teach a robot to copy it, or pin a virtual object to a real room needs that first. Getting it today is expensive. Either you buy capture hardware with SLAM built in, or you chain calibration → monocular depth → SLAM → hand reconstruction → trajectory cleanup, downloading a weight file per stage, debugging a failure mode per stage, and accepting a license restriction per stage. So the ability to produce this data sits with the few labs that can run that chain — while the thing embodied AI is shortest of is exactly large-scale real human hand data.
+Where the person wearing the camera walked, where each hand went and what it did there — in the real space around them, not in pixels on the screen. Getting that today means buying capture hardware with SLAM built in, or chaining calibration → monocular depth → SLAM → hand reconstruction → trajectory cleanup: a weight file, a failure mode and a license restriction per stage. The ability to produce this data ends up with the few labs that can run the chain — while large-scale real human hand data is exactly what embodied AI is shortest of.
 
-That is the gap MINT is built to close. **One ordinary RGB video, one 24 GB GPU, one forward pass** gives you world-space camera and two-hand motion. No depth map, no point cloud, no per-sequence optimisation, and no need to stand that five-stage chain up on your own machine. If you have video, you can produce data.
+MINT replaces the chain. **One ordinary RGB video, one 24 GB GPU, one forward pass** gives you world-space camera and two-hand motion. If you have video, you can produce data.
 
-- **One unified model, not a five-stage chain.** A shared spatiotemporal representation feeds a camera-extrinsics head, an independent field-of-view head, a camera-frame MANO head and a per-frame hand-presence head; explicit differentiable rigid composition turns them into world-space hand motion. No dense 3D intermediate at inference.
-- **Structured pipeline amortization.** The multi-stage pipeline is kept — offline, as a supervision generator — and one model is trained on its final structured state. Not logit distillation: the student learns the structured camera–hand state of an entire non-end-to-end system. The cost of running that system is paid once, by us, instead of once per user.
-- **Open end to end.** Model weights, training and inference code, the EgoPipeline labeling system, and a filtered **1,021-hour** structured egocentric dataset — so the pipeline is reproducible, auditable, and yours to extend rather than a service you query.
+- **One unified model, not a five-stage chain.** A shared spatiotemporal representation feeds four heads — camera extrinsics, field of view, camera-frame MANO, per-frame hand presence — and explicit differentiable rigid composition turns them into world-space hand motion. No dense 3D intermediate at inference.
+- **Structured pipeline amortization.** The multi-stage pipeline stays offline as a supervision generator, and one model learns its final structured state — not logit distillation, but the camera–hand state of an entire non-end-to-end system. Running that system is paid for once, by us, rather than once per user.
+- **Open end to end.** Model weights, training and inference code, the EgoPipeline labeling system, and a filtered **1,021-hour** structured egocentric dataset — reproducible, auditable and yours to extend, not a service you query.
 
 <img src="assets/readme/pipeline_vs_mint.webp" width="100%" alt="Same frames through the multi-stage pipeline and through MINT: the pipeline places both hands away from the real hands, MINT keeps them on the hands">
 
-<div align="center"><sub>Same frames, same overlay renderer. Left: the input. Middle: the conventional five-stage route, whose output is <b>pseudo-label, not ground truth</b>. Right: MINT, one forward pass. A qualitative example, selected by a measured overlay gap rather than by hand — see <a href="assets/readme/SOURCES.md">assets/readme/SOURCES.md</a>.</sub></div>
+<div align="center"><sub>Same frames, same overlay renderer. Left: the input. Middle: the conventional five-stage route, whose output is <b>pseudo-label, not ground truth</b>. Right: MINT, one forward pass.</sub></div>
 
 ---
 
 ## 📑 Table of Contents
 
-<details open>
-<summary>Collapse</summary>
-
-- [📋 Release status](#-release-status)
-- [🚀 Quick Start: Web Viewer](#-quick-start-web-viewer)
-  - [Model and asset locations](#model-and-asset-locations)
-  - [Using the Viewer](#using-the-viewer)
-- [🧠 How MINT works](#-how-mint-works)
-  - [Model at a glance](#model-at-a-glance)
-  - [Where the supervision comes from](#where-the-supervision-comes-from)
-  - [Why one model instead of the chain](#why-one-model-instead-of-the-chain)
-- [📊 What MINT is measured on](#-what-mint-is-measured-on)
-  - [Camera-frame bimanual reconstruction](#camera-frame-bimanual-reconstruction)
-  - [World-frame camera trajectory](#world-frame-camera-trajectory)
-  - [Protocol](#protocol)
-- [📦 What is included](#-what-is-included)
-- [🏋️ Training and optional pipeline reconstruction](#️-training-and-optional-pipeline-reconstruction)
-- [🗂️ Public Ego pretraining data](#️-public-ego-pretraining-data)
-- [🔐 LeRobot sample and privacy](#-lerobot-sample-and-privacy)
-- [⚠️ Known limits](#️-known-limits)
-- [🧾 Repository layout](#-repository-layout)
-- [📚 Documentation](#-documentation)
-- [✨ Acknowledgements](#-acknowledgements)
-- [📜 License](#-license)
-- [📖 Citation](#-citation)
-- [📮 Contact](#-contact)
-
-</details>
+<table>
+<tr>
+  <td><a href="#-release-status">📋 Release status</a></td>
+  <td><a href="#-quick-start-web-viewer">🚀 Quick Start: Web Viewer</a></td>
+  <td><a href="#-how-mint-works">🧠 How MINT works</a></td>
+</tr>
+<tr>
+  <td><a href="#-what-mint-is-measured-on">📊 What MINT is measured on</a></td>
+  <td><a href="#-what-is-included">📦 What is included</a></td>
+  <td><a href="#️-training-and-optional-pipeline-reconstruction">🏋️ Training and pipeline reconstruction</a></td>
+</tr>
+<tr>
+  <td><a href="#️-public-ego-pretraining-data">🗂️ Public Ego pretraining data</a></td>
+  <td><a href="#-lerobot-sample-and-privacy">🔐 LeRobot sample and privacy</a></td>
+  <td><a href="#️-known-limits">⚠️ Known limits</a></td>
+</tr>
+<tr>
+  <td><a href="#-repository-layout">🧾 Repository layout</a></td>
+  <td><a href="#-documentation">📚 Documentation</a></td>
+  <td><a href="#-acknowledgements">✨ Acknowledgements</a></td>
+</tr>
+<tr>
+  <td><a href="#-license">📜 License</a></td>
+  <td><a href="#-citation">📖 Citation</a></td>
+  <td></td>
+</tr>
+</table>
 
 ---
 
@@ -490,7 +489,6 @@ mint/
 | [Privacy and release checklist](docs/privacy.md) | consent, review, redistribution |
 | [Security policy](SECURITY.md) | how to report a vulnerability |
 | [Third-party notices](THIRD_PARTY_NOTICES.md) | upstream licenses — read before distributing |
-| [README art provenance](assets/readme/SOURCES.md) | which clip and which figure every image above comes from |
 
 ## ✨ Acknowledgements
 
@@ -526,4 +524,4 @@ The paper is under review; this entry will be replaced with the published refere
 
 ## 📮 Contact
 
-If you encounter any issues with installation, data generation, model training, inference, or the Viewer, please contact Zijie Zhu. WeChat: `z3132544408`; email: `3132544408@qq.com`.
+We are glad to share what we have learned and to help move egocentric data forward. If you run into anything — installation, data generation, model training, inference, or the Viewer — please contact Zijie Zhu. WeChat: `z3132544408`; email: `3132544408@qq.com`.
