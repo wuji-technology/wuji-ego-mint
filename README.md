@@ -211,13 +211,13 @@ Inference throughput measured on **RTX 4090D**, at 512 × 384 and 30 fps under i
 </tr>
 </thead>
 <tbody>
-<tr><td align="left">VITRA</td><td align="right">1260.0</td><td align="right">0.8</td><td align="right">—</td><td align="right">—</td><td align="right">—</td><td align="right">—</td></tr>
+<tr><td align="left">VITRA</td><td align="right">1260.0</td><td align="right">0.8</td><td align="right">—</td><td align="right">283.3</td><td align="right">3.5</td><td align="right">—</td></tr>
 <tr><td align="left">EgoPipeline</td><td align="right">—</td><td align="right">—</td><td align="right">—</td><td align="right">83.4</td><td align="right">12.0</td><td align="right">3.4×</td></tr>
 <tr><td align="left">MINT</td><td align="right"><b>72.4</b></td><td align="right"><b>13.8</b></td><td align="right"><b>17.4×</b></td><td align="right"><b>22.7</b></td><td align="right"><b>44.1</b></td><td align="right"><b>12.5×</b></td></tr>
 </tbody>
 </table>
 
-MINT is **17.4×** faster on one GPU (1260.0 → 72.4 ms/frame) and **12.5×** on four (283.3 → 22.7 ms/frame). The four-GPU block shows where that comes from: optimising the pipeline accounts for 3.4× (283.3 → 83.4), and the unified model takes it to 22.7. Only MINT clears 30 fps real time, at 44.1 fps.
+Against the conventional pipeline, MINT is **17.4×** faster on one GPU (VITRA 1260.0 → 72.4 ms/frame) and **12.5×** on four (283.3 → 22.7 ms/frame). The four-GPU columns show where that comes from: optimising the conventional pipeline itself (EgoPipeline) accounts for 3.4× (283.3 → 83.4), and the unified model takes it to 22.7. Only MINT clears 30 fps real time, at 44.1 fps.
 
 EgoPipeline is itself distributed-optimised (Ray multi-GPU operators, persistent workers, asynchronous CPU stages): rewriting its serial single-GPU execution as a scheduled 4-GPU worker pool took 179.0 s down to 63.9 s per 270 frames, **2.8×** internal to the pipeline. That is whole-clip wall-clock including decode and write-out, a different accounting from the steady-state cost above; the two do not multiply.
 

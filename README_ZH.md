@@ -208,13 +208,13 @@ Viewer 启动后会自动在默认浏览器打开 `http://127.0.0.1:8011`，然�
 </tr>
 </thead>
 <tbody>
-<tr><td align="left">VITRA</td><td align="right">1260.0</td><td align="right">0.8</td><td align="right">—</td><td align="right">—</td><td align="right">—</td><td align="right">—</td></tr>
+<tr><td align="left">VITRA</td><td align="right">1260.0</td><td align="right">0.8</td><td align="right">—</td><td align="right">283.3</td><td align="right">3.5</td><td align="right">—</td></tr>
 <tr><td align="left">EgoPipeline</td><td align="right">—</td><td align="right">—</td><td align="right">—</td><td align="right">83.4</td><td align="right">12.0</td><td align="right">3.4×</td></tr>
 <tr><td align="left">MINT</td><td align="right"><b>72.4</b></td><td align="right"><b>13.8</b></td><td align="right"><b>17.4×</b></td><td align="right"><b>22.7</b></td><td align="right"><b>44.1</b></td><td align="right"><b>12.5×</b></td></tr>
 </tbody>
 </table>
 
-MINT 单卡快 **17.4 倍**（1260.0 → 72.4 ms/帧），四卡快 **12.5 倍**（283.3 → 22.7 ms/帧）。四卡这一组能看出增益来自哪里：管线级优化占 3.4×（283.3 → 83.4），换成统一模型再压到 22.7。四卡下只有 MINT 跑过了 30 fps 实时线（44.1 fps）。
+和传统管线相比，MINT 单卡快 **17.4 倍**（VITRA 1260.0 → 72.4 ms/帧），四卡快 **12.5 倍**（283.3 → 22.7 ms/帧）。四卡这一组能看出增益来自哪里：把传统管线本身优化一遍（EgoPipeline）占 3.4×（283.3 → 83.4），换成统一模型再压到 22.7。四卡下只有 MINT 跑过了 30 fps 实时线（44.1 fps）。
 
 EgoPipeline 自己也做过分布式优化（Ray 多卡算子、常驻 worker、异步 CPU 阶段）：串行单卡改成 4 卡调度的 worker 池，270 帧的墙钟时间从 179.0 秒降到 63.9 秒，管线内部 **2.8×**。那是含解码与落盘的整段墙钟，和上表的稳态边际成本不是一个口径，两个数字不能相乘。
 
