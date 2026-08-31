@@ -213,15 +213,15 @@ Inference throughput measured on **RTX 4090D**, at 512 × 384 and 30 fps under i
 </tbody>
 </table>
 
-Against VITRA, MINT is **17.4×** faster on one GPU (1260.0 → 72.4 ms/frame) and **12.5×** faster on four (283.3 → 22.7 ms/frame). The four-GPU block also shows where the gain comes from: optimising the pipeline took VITRA's 283.3 ms/frame down to EgoPipeline's 83.4 (3.4×), and replacing the chain with one model took it to 22.7 (12.5× in total). MINT is also the only row that clears 30 fps real time, at 44.1 fps on four GPUs.
+MINT is **17.4×** faster on one GPU (1260.0 → 72.4 ms/frame) and **12.5×** on four (283.3 → 22.7 ms/frame). The four-GPU block shows where that comes from: optimising the pipeline accounts for 3.4× (283.3 → 83.4), and the unified model takes it to 22.7. Only MINT clears 30 fps real time, at 44.1 fps.
 
-Separately, the EgoPipeline baseline is itself already distributed-optimised — Ray multi-GPU operators, persistent workers, asynchronous CPU stages: rewriting its serial 1-GPU execution as a scheduled 4-GPU worker pool took 179.0 s down to 63.9 s per 270 frames, a **2.8×** speedup internal to the pipeline. That is whole-clip wall-clock including decode and write-out, not the steady-state marginal cost tabulated above; the two are different accountings and do not multiply.
+EgoPipeline is itself distributed-optimised (Ray multi-GPU operators, persistent workers, asynchronous CPU stages): rewriting its serial single-GPU execution as a scheduled 4-GPU worker pool took 179.0 s down to 63.9 s per 270 frames, **2.8×** internal to the pipeline. That is whole-clip wall-clock including decode and write-out, a different accounting from the steady-state cost above; the two do not multiply.
 
 ## 📊 What MINT is measured on
 
 ### Camera-frame bimanual reconstruction
 
-Table 1 of the paper, reproduced verbatim. Scoring charges a method for hands it declines to report: a missing hand is not skipped, it is given the error of a standard MANO placeholder, so refusing to predict is never cheaper than predicting badly. **MINT is zero-shot on both benchmarks** — it never saw either during training. ViDiHand, marked `*`, did train on most of both, so it is listed **for reference only** and is left out when deciding which value is best; bold marks the best of the remaining rows. `MINT + UKF` is the same model with the inference-time filter switched on, nothing else changed.
+**MINT is zero-shot on both benchmarks** — it never saw either during training. ViDiHand, marked `*`, did train on most of both, so it is listed **for reference only** and is left out when deciding which value is best; bold marks the best of the remaining rows. `MINT + UKF` is the same model with the inference-time filter switched on, nothing else changed.
 
 <table>
 <thead>
@@ -271,7 +271,7 @@ Table 1 of the paper, reproduced verbatim. Scoring charges a method for hands it
 </tbody>
 </table>
 
-Read this table together with the entry on hand accuracy in [Known limits](#️-known-limits). On **HOT3D**, setting aside the reference row ViDiHand, MINT has the best numbers in the table on all three detection metrics and on MPJPE-p, PA-MPJPE-p, GO-p and CT-p, and `MINT + UKF` has the lowest jitter of any row. On **ARCTIC**, its camera-frame joint error is clearly behind methods that do nothing but hand reconstruction — because this checkpoint's hand branch trained only on the coarse labels EgoPipeline produces and was never fine-tuned on high-precision hand data, so its hand accuracy tracks the quality of those labels. We report both benchmarks rather than only the favourable one.
+On **HOT3D**, setting aside the reference row ViDiHand, MINT has the best numbers in the table on all three detection metrics and on MPJPE-p, PA-MPJPE-p, GO-p and CT-p, and `MINT + UKF` has the lowest jitter of any row. On **ARCTIC**, its camera-frame joint error is clearly behind methods that do nothing but hand reconstruction — because this checkpoint's hand branch trained only on the coarse labels EgoPipeline produces and was never fine-tuned on high-precision hand data, so its hand accuracy tracks the quality of those labels. We report both benchmarks rather than only the favourable one.
 
 **The row that actually tests the claim is HaWoR.** HaWoR is upstream third-party work, and EgoPipeline calls it at stage 04 to produce camera-frame MANO — so it generated every hand label this checkpoint was trained on. It is the teacher here. A student trained on pseudo-labels cannot be expected to beat the process that generated them; matching it is the result being asked for. MINT matches and passes it: on ARCTIC, better global orientation (24.19 vs 43.33 deg) and translation (0.140 vs 0.149 m) with comparable Procrustes-aligned joint error (27.71 vs 26.38 mm); on HOT3D, better on every one of the eight metrics, by wide margins (MPJPE-p 23.61 vs 71.40 mm, F1 0.950 vs 0.654). One unified model, in one forward pass, reproduces the structured output of the cascade it was distilled from.
 
@@ -321,18 +321,18 @@ Table 2 of the paper: HOT3D (27 sequences, 94,978 frames) and the ARCTIC P2 vali
 </tbody>
 </table>
 
-**RPE-T and RPE-R are the metrics that matter for this model.** MINT exists to produce egocentric labels, those labels are consumed as training data, and training consumes camera motion as per-frame deltas rather than as an absolute pose in a global frame. Relative pose error is what propagates into whatever is trained on the output; ATE measures accumulated global drift that a delta-consuming trainer never sees.
+**RPE-T and RPE-R are what to read here.** MINT produces training data, and training uses per-frame camera deltas rather than absolute pose in a global frame. Relative pose error is what reaches whatever is trained on the output; ATE measures drift accumulated over a whole sequence, which a delta-based trainer never sees.
 
-On those two metrics: on **ARCTIC**, MINT has the lowest RPE-T in the table — 3.39 mm mean against 8.73 mm for the best external method — and the lowest RPE-R mean among external methods (0.256 vs HaWoR's 0.298). On **HOT3D**, RPE-T is second at 4.69 mm behind MegaSaM's 3.18 mm, and MegaSaM completes only 24 of 27 sequences; RPE-R there trails both MegaSaM and DROID-SLAM.
+On **ARCTIC**, MINT has the lowest RPE-T in the table (3.39 mm mean, against 8.73 mm for the next-best external method), and its RPE-R mean of 0.256 also beats every external method (HaWoR is next at 0.298). On **HOT3D**, RPE-T is second at 4.69 mm behind MegaSaM's 3.18 mm, and MegaSaM finishes 24 of 27 sequences; RPE-R there trails MegaSaM and DROID-SLAM.
 
-The other side, stated plainly: **ATE is not where this checkpoint wins** — 181.7 mm on HOT3D against DROID-SLAM's 49.1 mm — and the arc-length ratio says why. At 1.094 on HOT3D and 1.412 on ARCTIC the predicted path is longer than the real one, which is the scale enlargement recorded in [Known limits](#️-known-limits). Stage 2 is what addresses it: without Stage 2 the ratio is 0.466 on HOT3D, badly short, and Stage 2 pulls it to 1.094 — while over-correcting on ARCTIC. Absolute metric scale is the open problem in this release; relative motion is not.
+**ATE is not where this checkpoint wins**: 181.7 mm on HOT3D against DROID-SLAM's 49.1 mm. The arc-length ratio says why — 1.094 on HOT3D and 1.412 on ARCTIC mean the predicted path is longer than the real one, the scale enlargement noted in [Known limits](#️-known-limits). Stage 2 is what corrects it: without Stage 2 the HOT3D ratio is only 0.466, far too short; Stage 2 brings it to 1.094, and overshoots on ARCTIC.
 
 ### Protocol
 
-- **Held out completely.** HOT3D and ARCTIC images, pipeline labels and ground truth are excluded from training, high-precision calibration, hyper-parameter and loss-weight selection, and checkpoint selection. No test-time tuning. Only models satisfying this condition may enter the zero-shot tables.
-- **Split hygiene.** All official splits are made by original video ID before clipping, with additional participant-level separation wherever participant IDs exist.
-- **Same inputs for everyone.** All learned methods share inputs, evaluation preprocessing and a fixed evaluation manifest; sequence-level failures are counted consistently. Methods that cannot output both camera and hands receive N/A — no other method's output is ever substituted.
-- **One asymmetry, stated.** Where a compared method reports results under its own HOT3D/ARCTIC training and evaluation settings rather than zero-shot, that difference is reported explicitly instead of being averaged away.
+- **Held out completely.** HOT3D and ARCTIC images, pseudo-labels and ground truth took no part in training, high-precision calibration, hyper-parameter or loss-weight selection, or checkpoint selection, and there is no test-time tuning. Only under that condition is a result zero-shot.
+- **Split by video.** Official splits are made by original video ID before clipping; where participant IDs exist, we separate by participant as well.
+- **Every method gets the same input.** Inputs, evaluation preprocessing and the evaluation manifest are identical, and sequence-level failures count the same way for everyone. A method that cannot output both camera and hands gets N/A; we never substitute another method's output.
+- **The one exception is labelled.** Where a compared method reports results from its own training on HOT3D/ARCTIC rather than zero-shot, we say so rather than averaging it in.
 
 **Benchmark integrity statement.** We commit that every metric reported by this project is an authentic result produced under the stated evaluation protocol; we do not alter the original numeric results. To reproduce a baseline or another method's exact values, use that method's official repository and environment. The metric definitions, alignment rules, aggregation logic, and reporting code used by MINT are available in `eval/model_effect/benchmark/` for inspection.
 
