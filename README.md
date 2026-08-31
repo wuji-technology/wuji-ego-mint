@@ -192,7 +192,7 @@ Its output is **pseudo-label, not ground truth** — that distinction is load-be
 
 A staged chain has structural costs that better engineering does not remove: each stage re-encodes the same video, camera and hands meet only in post-processing, every stage is capped by the one before it, and one operator regressing regresses the whole record.
 
-Inference throughput at 512 × 384 and 30 fps under identical conditions; time is the **marginal cost per frame in steady state**. Speedups are against **VITRA**, which **EgoPipeline**, this project's data pipeline, was built by optimising. The three methods are points on one line of work: VITRA to start, EgoPipeline as the pipeline-level optimisation, MINT replacing the chain with a single model.
+Inference throughput measured on **RTX 4090D**, at 512 × 384 and 30 fps under identical conditions; time is the **marginal cost per frame in steady state**. Speedups are against **VITRA**, which **EgoPipeline**, this project's data pipeline, was built by optimising. The three methods are points on one line of work: VITRA to start, EgoPipeline as the pipeline-level optimisation, MINT replacing the chain with a single model.
 
 <table>
 <thead>
