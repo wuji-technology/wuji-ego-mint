@@ -92,6 +92,7 @@ MINT 就是为补上这个缺口而做的：**一段普通 RGB 视频、一张 2
 | ✅ | 1,021 小时结构化第一视角数据集（非视频部分） | [Hugging Face](https://huggingface.co/datasets/ZZJAsher/wuji_ego_mint) · [ModelScope](https://www.modelscope.cn/datasets/AsherZhu/wuji_ego_mint) |
 | ✅ | Benchmark 实现与 CLI，已接入 Viewer | `eval/model_effect/benchmark/` |
 | ✅ | EgoPipeline 调度、清理与 LeRobot 导出参考实现 | `ego_pipeline/` |
+| ✅ | 视频规格化与手部过滤脚本 | [`ego_pipeline/preprocessing/`](ego_pipeline/preprocessing/) |
 | ✅ | Wuji 灵巧手 URDF/MJCF/STL 与重定向 | `eval/simulate/wuji-retargeting/` |
 | ✅ | HOT3D / ARCTIC 零样本结果表（论文 Table 1） | [相机系下的双手重建](#相机系下的双手重建) |
 | ⏳ | 相机轨迹的尺度校正版本 —— 已发布数据集中的相机轨迹存在尺度放大 | 现有轨迹可用于预训练，不可用于米制评测，成因见[公开 Ego 预训练数据](#️-公开-ego-预训练数据) |
@@ -131,21 +132,6 @@ Quick Start 使用的模型与资产请按下表放置。`scripts/download_asset
 | MANO 左右手模型 | [MANO 官网](https://mano.is.tue.mpg.de/) | `assets/mano/mano_right/MANO_RIGHT.pkl`<br>`assets/mano/mano_left/MANO_LEFT.pkl` | 需要注册并接受 MANO License。 |
 | LingBot-Map 预训练骨干 | [LingBot-Map](https://github.com/robbyant/lingbot-map) | `assets/models/lingbot-map.pt` | 可选资产，仅在对应配置需要时下载。 |
 | Wuji Hand URDF、MJCF 和 STL | 已包含在本仓库 | `eval/simulate/wuji-retargeting/wuji_retargeting/wuji-description/hand/body/` | 无需额外下载。 |
-
-如果需要复现 Ego 数据生产管线，还需根据各上游项目的许可证自行下载相应权重，并放到以下固定路径：
-
-| 数据管线资产 | 仓库内放置路径 |
-| --- | --- |
-| GeoCalib 权重 | `model/geocalib/pinhole.tar` |
-| MoGe 权重 | `model/moge2/model.pt` |
-| Mega-SAM 权重 | `model/megasam/megasam_final.pth` |
-| HaWoR 权重 | `model/hawor/hawor.ckpt` |
-| HaWoR 配置 | `model/hawor/model_config.yaml` |
-| HaWoR 检测器 | `model/hawor/detector.pt` |
-| DROID-SLAM 权重 | `third_party/HaWoR/weights/external/droid.pth` |
-| Metric3D 权重 | `third_party/HaWoR/thirdparty/Metric3D/weights/metric_depth_vit_large_800k.pth` |
-| HaWoR 右手 MANO | `third_party/HaWoR/_DATA/data/mano/MANO_RIGHT.pkl` |
-| HaWoR 左手 MANO | `third_party/HaWoR/_DATA/data_left/mano_left/MANO_LEFT.pkl` |
 
 ### 使用 Viewer
 
@@ -197,7 +183,7 @@ Viewer 启动后会自动在默认浏览器打开 `http://127.0.0.1:8011`，然�
 
 | 阶段 | 组件 | 产出 |
 | --- | --- | --- |
-| 00 | 预处理 | 校验元数据、每段只解码一次、切分重叠片段、丢弃过短与脏数据 |
+| 00 | [预处理与过滤](ego_pipeline/preprocessing/) | 规格化 fps/分辨率/时长；按手部检测切掉无手与多手区间；校验元数据、切分重叠片段 |
 | 01 | GeoCalib | 相机内参 |
 | 02 | MoGe-2 | 单目深度 |
 | 03 | MegaSaM / DROID-SLAM | 米制相机轨迹 |
@@ -398,6 +384,21 @@ GeoCalib、MoGe 和 Mega-SAM 的源码快照位于 `third_party/`，但生产管
 
 公开版本提供的是实现参考，而不是生产数据生成器的一键复现。请直接使用 MINT 进行模型推理；如需复现数据管线，请自行准备已授权的上游源码和资产，并按[数据管线文档](docs/data-pipeline.md)完成本地整合。
 
+如果你确实要走这条路，最省力的做法是：先按各上游项目的官方说明把对应的库分别下载、装好、单独跑通，再对照 `ego_pipeline/` 的源码把它们接起来 —— 这一步很适合交给 AI 编程工具，让它读上游 API 和本仓库的调用约定，帮你写兼容层。下面是各资产在本仓库中的固定放置路径：
+
+| 数据管线资产 | 仓库内放置路径 |
+| --- | --- |
+| GeoCalib 权重 | `model/geocalib/pinhole.tar` |
+| MoGe 权重 | `model/moge2/model.pt` |
+| Mega-SAM 权重 | `model/megasam/megasam_final.pth` |
+| HaWoR 权重 | `model/hawor/hawor.ckpt` |
+| HaWoR 配置 | `model/hawor/model_config.yaml` |
+| HaWoR 检测器 | `model/hawor/detector.pt` |
+| DROID-SLAM 权重 | `third_party/HaWoR/weights/external/droid.pth` |
+| Metric3D 权重 | `third_party/HaWoR/thirdparty/Metric3D/weights/metric_depth_vit_large_800k.pth` |
+| HaWoR 右手 MANO | `third_party/HaWoR/_DATA/data/mano/MANO_RIGHT.pkl` |
+| HaWoR 左手 MANO | `third_party/HaWoR/_DATA/data_left/mano_left/MANO_LEFT.pkl` |
+
 ### 训练模型
 
 训练配置只保留与两个指定 checkpoint 对应的两阶段配置。`step_00019000` 是 Stage 1；`step_00004500` 是从 Stage 1 权重初始化、仅训练 WorldEngine 相机头的 Stage 2，也是微调完成后开源发布的最终模型 checkpoint：
@@ -466,6 +467,7 @@ mint/
 |-- mint/             CLI、推理引擎、渲染器和 Viewer
 |-- model_train/      训练引擎、模型、损失函数和数据加载器
 |-- ego_pipeline/     Ray 调度、Actor、模型后端、轨迹清理、Manifest 和数据导出
+|   `-- preprocessing/  视频规格化与手部过滤（管线各级之前的预处理）
 |-- scripts/          环境、资产、隐私和样例处理脚本
 `-- third_party/      可分发源码快照；HaWoR 适配源码仅本地，权重和授权资产不包含
 ```
