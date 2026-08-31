@@ -37,13 +37,15 @@ Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Y
 
 ---
 
-### 🤲 Meet MINT — world-space camera and bimanual motion, from one RGB video, in one forward pass
+### 🤲 Meet MINT — world-space egocentric hand data anyone can afford to produce
 
-Activity understanding, robot imitation and AR all want the same thing: **where the wearer went and what both hands did, in world coordinates.** Today that state is recovered by chaining calibration → monocular depth → SLAM → hand reconstruction → trajectory cleanup. MINT replaces the chain at deployment time.
+Where the person wearing the camera walked, where each hand went, and what it did there — measured in the real space around them, not in pixels on the screen. Anything that has to understand what someone is doing, teach a robot to copy it, or pin a virtual object to a real room needs that first. Getting it today is expensive. Either you buy capture hardware with SLAM built in, or you chain calibration → monocular depth → SLAM → hand reconstruction → trajectory cleanup, downloading a weight file per stage, debugging a failure mode per stage, and accepting a license restriction per stage. So the ability to produce this data sits with the few labs that can run that chain — while the thing embodied AI is shortest of is exactly large-scale real human hand data.
 
-- **One unified model, not a five-stage chain.** A shared spatiotemporal representation feeds a camera-extrinsics head, an independent field-of-view head, a camera-frame MANO head and a per-frame hand-presence head; explicit differentiable rigid composition turns them into world-space hand motion. No depth map, no point cloud, no dense 3D intermediate at inference.
-- **Structured pipeline amortization.** The multi-stage pipeline is kept — offline, as a supervision generator — and one model is trained on its final structured state. Not logit distillation: the student learns the structured camera–hand state of an entire non-end-to-end system.
-- **Open end to end.** Model weights, training and inference code, the EgoPipeline labeling system, and a filtered **1,021-hour** structured egocentric dataset.
+That is the gap MINT is built to close. **One ordinary RGB video, one 24 GB GPU, one forward pass** gives you world-space camera and two-hand motion. No depth map, no point cloud, no per-sequence optimisation, and no need to stand that five-stage chain up on your own machine. If you have video, you can produce data.
+
+- **One unified model, not a five-stage chain.** A shared spatiotemporal representation feeds a camera-extrinsics head, an independent field-of-view head, a camera-frame MANO head and a per-frame hand-presence head; explicit differentiable rigid composition turns them into world-space hand motion. No dense 3D intermediate at inference.
+- **Structured pipeline amortization.** The multi-stage pipeline is kept — offline, as a supervision generator — and one model is trained on its final structured state. Not logit distillation: the student learns the structured camera–hand state of an entire non-end-to-end system. The cost of running that system is paid once, by us, instead of once per user.
+- **Open end to end.** Model weights, training and inference code, the EgoPipeline labeling system, and a filtered **1,021-hour** structured egocentric dataset — so the pipeline is reproducible, auditable, and yours to extend rather than a service you query.
 
 <img src="assets/readme/pipeline_vs_mint.webp" width="100%" alt="Same frames through the multi-stage pipeline and through MINT: the pipeline places both hands away from the real hands, MINT keeps them on the hands">
 
@@ -92,7 +94,7 @@ Activity understanding, robot imitation and AR all want the same thing: **where 
 | ✅ | Inference, Web Viewer, training code | this repository |
 | ✅ | 1,021-hour structured egocentric dataset (non-video portion) | [Hugging Face](https://huggingface.co/datasets/ZZJAsher/wuji_ego_mint) · [ModelScope](https://www.modelscope.cn/datasets/AsherZhu/wuji_ego_mint) |
 | ✅ | Benchmark implementation and CLI, integrated into the Viewer | `eval/model_effect/benchmark/` |
-| ✅ | EgoPipeline orchestration, cleaning and LeRobot export reference | `ray_pipeline/` |
+| ✅ | EgoPipeline orchestration, cleaning and LeRobot export reference | `ego_pipeline/` |
 | ✅ | Wuji hand URDF/MJCF/STL and retargeting | `eval/simulate/wuji-retargeting/` |
 | ✅ | Zero-shot HOT3D / ARCTIC result table (paper Table 1) | [Camera-frame bimanual reconstruction](#camera-frame-bimanual-reconstruction) |
 | ⏳ | Scale-corrected camera trajectories — the released dataset's trajectories are scale-enlarged | The current ones are usable for pretraining, not for metric evaluation. Cause in [Public Ego pretraining data](#️-public-ego-pretraining-data) |
@@ -215,7 +217,7 @@ Its output is **pseudo-label, not ground truth** — that distinction is load-be
 
 A staged chain has structural costs that better engineering does not remove: each stage re-encodes the same video, camera and hands meet only in post-processing, every stage is capped by the one before it, and one operator regressing regresses the whole record.
 
-Inference throughput at 512 × 384 and 30 fps under identical conditions. Time is the **marginal cost per frame in steady state**. On one GPU the comparison is against **HaWoR**, the hand-reconstruction branch of EgoPipeline; on four GPUs it is against the full **EgoPipeline** cascade. VITRA is included as a common external reference, and the speedup column is measured against it.
+Inference throughput at 512 × 384 and 30 fps under identical conditions. Time is the **marginal cost per frame in steady state**, and the speedup column is measured against **VITRA** because **EgoPipeline**, this project's data pipeline, was built by optimising VITRA — VITRA is where this line of work started. These rows are one progression rather than a field of competitors: VITRA as the starting point, EgoPipeline as the pipeline-level optimisation of it, and MINT replacing the whole chain with a single model.
 
 <table>
 <thead>
@@ -229,7 +231,6 @@ Inference throughput at 512 × 384 and 30 fps under identical conditions. Time i
 <tbody>
 <tr><th colspan="4" align="left">One GPU</th></tr>
 <tr><td align="left">VITRA</td><td align="right">1260.0</td><td align="right">0.8</td><td align="right">—</td></tr>
-<tr><td align="left">HaWoR</td><td align="right">105.1</td><td align="right">9.5</td><td align="right">12.0×</td></tr>
 <tr><td align="left">MINT</td><td align="right"><b>72.4</b></td><td align="right"><b>13.8</b></td><td align="right"><b>17.4×</b></td></tr>
 <tr><th colspan="4" align="left">Four GPUs</th></tr>
 <tr><td align="left">VITRA</td><td align="right">283.3</td><td align="right">3.5</td><td align="right">—</td></tr>
@@ -238,7 +239,7 @@ Inference throughput at 512 × 384 and 30 fps under identical conditions. Time i
 </tbody>
 </table>
 
-Measured against the thing MINT actually replaces rather than against the external reference: **1.45×** HaWoR on one GPU (105.1 → 72.4 ms/frame) and **3.7×** the full EgoPipeline cascade on four GPUs (83.4 → 22.7 ms/frame).
+Against VITRA, MINT is **17.4×** faster on one GPU (1260.0 → 72.4 ms/frame) and **12.5×** faster on four (283.3 → 22.7 ms/frame). The four-GPU block also shows where the gain comes from: optimising the pipeline took VITRA's 283.3 ms/frame down to EgoPipeline's 83.4 (3.4×), and replacing the chain with one model took it to 22.7 (12.5× in total). MINT is also the only row that clears 30 fps real time, at 44.1 fps on four GPUs.
 
 Separately, the EgoPipeline baseline is itself already distributed-optimised — Ray multi-GPU operators, persistent workers, asynchronous CPU stages: rewriting its serial 1-GPU execution as a scheduled 4-GPU worker pool took 179.0 s down to 63.9 s per 270 frames, a **2.8×** speedup internal to the pipeline. That is whole-clip wall-clock including decode and write-out, not the steady-state marginal cost tabulated above; the two are different accountings and do not multiply.
 
@@ -246,7 +247,7 @@ Separately, the EgoPipeline baseline is itself already distributed-optimised —
 
 ### Camera-frame bimanual reconstruction
 
-Table 1 of the paper, reproduced verbatim. Every row is scored under the **coverage-aware protocol**: a hand a method declines to report is not skipped, it is charged the error of a canonical MANO placeholder — so refusing to predict is never cheaper than predicting badly. **MINT is zero-shot on both benchmarks.** ViDiHand (marked `*`) is trained on most of both, so it is a **reference row, not a comparable one**; bold marks the best value among the comparable rows, excluding that reference row. `MINT + UKF` applies the inference-time filter and changes nothing else.
+Table 1 of the paper, reproduced verbatim. Scoring charges a method for hands it declines to report: a missing hand is not skipped, it is given the error of a standard MANO placeholder, so refusing to predict is never cheaper than predicting badly. **MINT is zero-shot on both benchmarks** — it never saw either during training. ViDiHand, marked `*`, did train on most of both, so it is listed **for reference only** and is left out when deciding which value is best; bold marks the best of the remaining rows. `MINT + UKF` is the same model with the inference-time filter switched on, nothing else changed.
 
 <table>
 <thead>
@@ -296,9 +297,9 @@ Table 1 of the paper, reproduced verbatim. Every row is scored under the **cover
 </tbody>
 </table>
 
-Read this table together with the second entry in [Known limits](#️-known-limits). On **HOT3D**, zero-shot MINT is the best comparable row on detection, MPJPE-p, PA-MPJPE-p, GO-p and CT-p, and `MINT + UKF` has the lowest jitter in the table including the reference row. On **ARCTIC**, its camera-frame joint error is clearly behind the dedicated single-task reconstructors. Overall that places the released checkpoint **close to the state of the art on camera-frame hands rather than at it**, and the reason is structural: this checkpoint's hand branch is trained only on coarse EgoPipeline pseudo-labels and was never fine-tuned on high-precision camera-frame hand data, so its camera-frame hand accuracy tracks the quality of those labels rather than the state of the art. We report both benchmarks rather than the favourable one.
+Read this table together with the entry on hand accuracy in [Known limits](#️-known-limits). On **HOT3D**, setting aside the reference row ViDiHand, MINT has the best numbers in the table on all three detection metrics and on MPJPE-p, PA-MPJPE-p, GO-p and CT-p, and `MINT + UKF` has the lowest jitter of any row. On **ARCTIC**, its camera-frame joint error is clearly behind methods that do nothing but hand reconstruction — because this checkpoint's hand branch trained only on the coarse labels EgoPipeline produces and was never fine-tuned on high-precision hand data, so its hand accuracy tracks the quality of those labels. We report both benchmarks rather than only the favourable one.
 
-**The row that actually tests the claim is HaWoR** — the hand-reconstruction stage inside EgoPipeline, and therefore the teacher that produced every hand label this checkpoint was trained on. A student trained on pseudo-labels cannot be expected to beat the process that generated them; matching it is the result being asked for. MINT matches or passes it: on ARCTIC, better global orientation (24.19 vs 43.33 deg) and translation (0.140 vs 0.149 m) with comparable Procrustes-aligned joint error (27.71 vs 26.38 mm); on HOT3D, better on every one of the eight metrics, by wide margins (MPJPE-p 23.61 vs 71.40 mm, F1 0.950 vs 0.654). One unified model, in one forward pass, reproduces the structured output of the cascade it was distilled from — at a fraction of its cost.
+**The row that actually tests the claim is HaWoR.** HaWoR is upstream third-party work, and EgoPipeline calls it at stage 04 to produce camera-frame MANO — so it generated every hand label this checkpoint was trained on. It is the teacher here. A student trained on pseudo-labels cannot be expected to beat the process that generated them; matching it is the result being asked for. MINT matches and passes it: on ARCTIC, better global orientation (24.19 vs 43.33 deg) and translation (0.140 vs 0.149 m) with comparable Procrustes-aligned joint error (27.71 vs 26.38 mm); on HOT3D, better on every one of the eight metrics, by wide margins (MPJPE-p 23.61 vs 71.40 mm, F1 0.950 vs 0.654). One unified model, in one forward pass, reproduces the structured output of the cascade it was distilled from.
 
 That is what makes the remaining gap a **data problem rather than an architectural one**. The ceiling on camera-frame hand accuracy is the pseudo-label quality, not the model: the same architecture fine-tuned on high-precision camera-frame hand data should produce a MINT that emits high-precision labels, and that fine-tune is the next step, not a redesign.
 
@@ -380,7 +381,7 @@ Set `CAMERA_TRAJECTORY_ROOT` for camera-trajectory exports when needed. Aliyun d
 | Train | `python -m mint train` | Train the camera-and-hand MINT model with Accelerate/DDP. |
 | Benchmark | `python eval/model_effect/benchmark/run.py` | Open benchmark CLI with user-provided data and environment. |
 | Audit | `python -m mint doctor` | Verify the environment, optional backends, assets, and GPU runtime. |
-| Pipeline reference | `ray_pipeline/` | Reuse the open Ray orchestration, interfaces, cleaning, and LeRobot export code after integrating the required upstream backends locally. |
+| Pipeline reference | `ego_pipeline/` | Reuse the open Ray orchestration, interfaces, cleaning, and LeRobot export code after integrating the required upstream backends locally. |
 
 ## 🏋️ Training and optional pipeline reconstruction
 
@@ -396,7 +397,7 @@ The public release uses the Viewer as the unified entry point for MINT inference
 
 GeoCalib, MoGe, and Mega-SAM source snapshots are distributed under `third_party/`, but some production adaptations cannot be published under their upstream license terms. In particular, the locally adapted HaWoR source is Git-ignored because CC BY-NC-ND prohibits redistribution of modifications. Weights, MANO files, and other separately licensed assets are also excluded.
 
-If you need to reconstruct the data-generation pipeline, first read [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md), obtain and install every required upstream library and asset under its own terms, and implement the necessary compatibility adapters locally. The open code in `ray_pipeline/` documents the orchestration, interfaces, data flow, cleaning, manifests, and LeRobot export contracts. An AI coding assistant may help reconcile upstream API differences, but the resulting integration remains the user's responsibility and must comply with all licenses. Only after completing that local integration should the data-profile doctor and `python -m mint pipeline` be treated as usable entry points.
+If you need to reconstruct the data-generation pipeline, first read [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md), obtain and install every required upstream library and asset under its own terms, and implement the necessary compatibility adapters locally. The open code in `ego_pipeline/` documents the orchestration, interfaces, data flow, cleaning, manifests, and LeRobot export contracts. An AI coding assistant may help reconcile upstream API differences, but the resulting integration remains the user's responsibility and must comply with all licenses. Only after completing that local integration should the data-profile doctor and `python -m mint pipeline` be treated as usable entry points.
 
 The public release provides an implementation reference, not a one-command reproduction of the production data generator. Use MINT directly for inference; for pipeline reconstruction, supply the licensed upstream code and assets and complete the local integration described in [Data pipeline](docs/data-pipeline.md).
 
@@ -450,12 +451,11 @@ Dataset access does not itself grant redistribution rights. The publisher must s
 
 We would rather you read these here than discover them later:
 
-- **EgoPipeline output is pseudo-label, not ground truth.** Every accuracy claim about MINT is measured on held-out real ground truth instead.
-- **Camera-frame hand accuracy is bounded by the teacher — close to the state of the art, not at it.** The hand branch of the released checkpoint is supervised entirely by the coarse EgoPipeline pseudo-labels. Stage 2 corrects only the camera trajectory and keeps the hand, presence and field-of-view modules frozen, so no high-precision camera-frame hand data ever fine-tunes them. Camera-frame hand reconstruction therefore approaches the accuracy of the pipeline output it learned from without exceeding it: best among the comparable rows on HOT3D, but clearly behind the dedicated single-task reconstructors on ARCTIC's close-range bimanual manipulation ([Table 1](#camera-frame-bimanual-reconstruction)). Fine-tuning the hand branch on high-precision camera-frame hand data is the obvious remedy and is not part of this release.
-- **The released camera trajectories still show scale enlargement** (see the warning above). Use them for pretraining, not for metric evaluation.
-- **32-frame clip training does not by itself prove long-video consistency.** Long-sequence behaviour is reported separately, not extrapolated from clip-level accuracy.
-- **Presence labels inherit a fixed detector threshold.** Shared temporal features let the student correct isolated teacher misses and false positives, and that is audited against blind-reviewed presence rather than against the pseudo-labels it was trained on.
-- **This repository is not the complete production data pipeline.** License-restricted adaptations are excluded by design; see [Training and optional pipeline reconstruction](#️-training-and-optional-pipeline-reconstruction).
+- **Camera-frame hand accuracy is limited by the quality of the labels it was trained on.** The hand branch of the released checkpoint is supervised entirely by the coarse labels EgoPipeline produces automatically. Stage 2 corrects only the camera trajectory — the hand, presence and field-of-view modules are frozen for that step — so high-precision hand data never fine-tunes them. Its hand accuracy therefore sits roughly at the level of the labels it learned from: on HOT3D it is the best row in the table (setting aside ViDiHand, which trained on both benchmarks and is listed only for reference), but on the close-range two-handed manipulation in ARCTIC it is clearly behind methods that do nothing but hand reconstruction ([Table 1](#camera-frame-bimanual-reconstruction)). Improving this needs a fine-tune of the hand branch on high-precision hand data, not a change to the model; that fine-tune is not in this release.
+- **The released camera trajectories are scale-enlarged.** The shape of a trajectory is usable but its length runs long, so use them for pretraining rather than for metric evaluation or as real-scale ground truth. The cause is described under [Public Ego pretraining data](#️-public-ego-pretraining-data).
+- **Training happens on 32-frame clips, which by itself proves nothing about long videos.** Long-sequence behaviour is reported separately; we do not extrapolate it from clip-level accuracy.
+- **Whether a hand is in frame comes from a detector with a fixed threshold.** That label therefore carries the systematic bias of that threshold. MINT sees the whole clip, so it can correct the detector's occasional misses and false positives — but the claim that it does correct them is checked against hand-labelled, blind-reviewed presence, not against the labels it trained on.
+- **This repository is not the complete production data pipeline.** The upstream code and weights we modified — adapted HaWoR, for instance — are deliberately left out because their licenses do not permit redistribution. To run the whole pipeline yourself you download those under each upstream project's own terms; see [Training and optional pipeline reconstruction](#️-training-and-optional-pipeline-reconstruction).
 
 ## 🧾 Repository layout
 
@@ -468,7 +468,7 @@ mint/
 |-- environments/     Full and inference-only dependency specifications
 |-- mint/             CLI, inference engine, renderer, and web viewer
 |-- model_train/      Training engine, model, losses, and LeRobot loader
-|-- ray_pipeline/     Ray scheduling, actors, model backends, trajectory cleanup, manifests, and export
+|-- ego_pipeline/     Ray scheduling, actors, model backends, trajectory cleanup, manifests, and export
 |-- scripts/          Reproducible setup, asset, privacy, and sample tools
 `-- third_party/      Redistributable source snapshot; adapted HaWoR is local-only, assets excluded
 ```
