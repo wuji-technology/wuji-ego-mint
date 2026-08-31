@@ -55,33 +55,25 @@ MINT replaces the chain. **One ordinary RGB video, one 24 GB GPU, one forward pa
 
 ## 📑 Table of Contents
 
-<table>
-<tr>
-  <td><a href="#-release-status">📋 Release status</a></td>
-  <td><a href="#-quick-start-web-viewer">🚀 Quick Start: Web Viewer</a></td>
-  <td><a href="#-how-mint-works">🧠 How MINT works</a></td>
-</tr>
-<tr>
-  <td><a href="#-what-mint-is-measured-on">📊 What MINT is measured on</a></td>
-  <td><a href="#-what-is-included">📦 What is included</a></td>
-  <td><a href="#️-training-and-optional-pipeline-reconstruction">🏋️ Training and pipeline reconstruction</a></td>
-</tr>
-<tr>
-  <td><a href="#️-public-ego-pretraining-data">🗂️ Public Ego pretraining data</a></td>
-  <td><a href="#-lerobot-sample-and-privacy">🔐 LeRobot sample and privacy</a></td>
-  <td><a href="#️-known-limits">⚠️ Known limits</a></td>
-</tr>
-<tr>
-  <td><a href="#-repository-layout">🧾 Repository layout</a></td>
-  <td><a href="#-documentation">📚 Documentation</a></td>
-  <td><a href="#-acknowledgements">✨ Acknowledgements</a></td>
-</tr>
-<tr>
-  <td><a href="#-license">📜 License</a></td>
-  <td><a href="#-citation">📖 Citation</a></td>
-  <td></td>
-</tr>
-</table>
+<details open>
+<summary>Collapse</summary>
+
+- [📋 Release status](#-release-status)
+- [🚀 Quick Start: Web Viewer](#-quick-start-web-viewer)
+- [🧠 How MINT works](#-how-mint-works)
+- [📊 What MINT is measured on](#-what-mint-is-measured-on)
+- [📦 What is included](#-what-is-included)
+- [🏋️ Training and optional pipeline reconstruction](#️-training-and-optional-pipeline-reconstruction)
+- [🗂️ Public Ego pretraining data](#️-public-ego-pretraining-data)
+- [🔐 LeRobot sample and privacy](#-lerobot-sample-and-privacy)
+- [⚠️ Known limits](#️-known-limits)
+- [🧾 Repository layout](#-repository-layout)
+- [📚 Documentation](#-documentation)
+- [✨ Acknowledgements](#-acknowledgements)
+- [📜 License](#-license)
+- [📖 Citation](#-citation)
+
+</details>
 
 ---
 
