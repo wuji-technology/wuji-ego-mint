@@ -325,7 +325,7 @@ Table 2 of the paper: HOT3D (27 sequences, 94,978 frames) and the ARCTIC P2 vali
 </tbody>
 </table>
 
-**RPE-T and RPE-R are what to read here.** MINT produces training data, and training uses per-frame camera deltas rather than absolute pose in a global frame. Relative pose error is what reaches whatever is trained on the output; ATE measures drift accumulated over a whole sequence, which a delta-based trainer never sees.
+**RPE-T and RPE-R are what to read here.** MINT produces training data, and training uses per-frame camera deltas rather than absolute pose in a global frame. Relative pose error is what reaches whatever is trained on the output.
 
 On **ARCTIC**, MINT has the lowest RPE-T in the table (3.39 mm mean, against 8.73 mm for the next-best external method), and its RPE-R mean of 0.256 also beats every external method (HaWoR is next at 0.298). On **HOT3D**, RPE-T is second at 4.69 mm behind MegaSaM's 3.18 mm, and MegaSaM finishes 24 of 27 sequences; RPE-R there trails MegaSaM and DROID-SLAM.
 
