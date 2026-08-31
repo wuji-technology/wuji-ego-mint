@@ -190,11 +190,9 @@ Its output is **pseudo-label, not ground truth** — that distinction is load-be
 
 <img src="assets/readme/teaser.webp" width="100%" alt="Three panels from one forward pass: ego view with reprojected MANO, the world-space camera and two-hand trajectory, and that trajectory retargeted to the Wuji hand in MuJoCo">
 
-<div align="center"><sub>What a single forward pass returns, in the three spaces the staged chain only reaches by post-processing its own stage outputs: ego-view MANO, world-space camera and two-hand trajectory, and the Wuji-hand retarget. All three panels are prediction.</sub></div>
-
 A staged chain has structural costs that better engineering does not remove: each stage re-encodes the same video, camera and hands meet only in post-processing, every stage is capped by the one before it, and one operator regressing regresses the whole record.
 
-Inference throughput at 512 × 384 and 30 fps under identical conditions. Time is the **marginal cost per frame in steady state**, and the speedup column is measured against **VITRA** because **EgoPipeline**, this project's data pipeline, was built by optimising VITRA — VITRA is where this line of work started. These rows are one progression rather than a field of competitors: VITRA as the starting point, EgoPipeline as the pipeline-level optimisation of it, and MINT replacing the whole chain with a single model.
+Inference throughput at 512 × 384 and 30 fps under identical conditions; time is the **marginal cost per frame in steady state**. Speedups are against **VITRA**, which **EgoPipeline**, this project's data pipeline, was built by optimising. The three methods are points on one line of work: VITRA to start, EgoPipeline as the pipeline-level optimisation, MINT replacing the chain with a single model.
 
 <table>
 <thead>
