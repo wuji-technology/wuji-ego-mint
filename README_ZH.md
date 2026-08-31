@@ -1,21 +1,22 @@
 <div align="center">
 
 <!--
-  完整宣传片（1 分 49 秒）—— 下面的封面视频墙同时充当宣传片的海报：它链接到
+  完整宣传片（1 分 49 秒）—— 宣传片放在下面的封面视频墙「之后」，单独一行：链接到
   assets/readme/full_film.mp4（1280 × 720，8.5 MB，已入库），GitHub 会在自己的
-  blob 页面里播放。
+  blob 页面里播放。封面视频墙保持为独立的图片，不要把它并进宣传片的链接里。
 
   真正的「内嵌」播放器只对 github.com/user-attachments 链接渲染，而这种链接只能
   通过浏览器上传获得：在本仓库任意 issue / PR 的评论框里把 MP4 拖进去，复制生成的
-  https://github.com/user-attachments/assets/... 链接，单独一行粘贴到这段注释
-  下面 —— 如果希望宣传片不点击就自动播放，这是升级路径。指向仓库文件的 <video>
-  标签会被 GitHub 的 markdown 过滤器整段删掉，所以海报链接是入库方案里最好的做法。
+  https://github.com/user-attachments/assets/... 链接，单独一行粘贴到现在
+  「播放完整宣传片」那一行的位置，也就是封面视频墙之后 —— 如果希望宣传片不点击就
+  自动播放，这是升级路径。指向仓库文件的 <video> 标签会被 GitHub 的 markdown
+  过滤器整段删掉，所以链接是入库方案里最好的做法。
 
   全画质母版：宣传片工程里的 out/MINT_full_en_music.mp4（1920 × 1080，76 MB，
   特意不入库）。
 -->
 
-<a href="assets/readme/full_film.mp4"><img src="assets/readme/scale.webp" width="100%" alt="108 个 MINT 渲染片段同时播放，每格一个片段 —— 点击播放完整宣传片"></a>
+<img src="assets/readme/scale.webp" width="100%" alt="108 个 MINT 渲染片段同时播放，每格一个片段">
 
 <sub>▶ <a href="assets/readme/full_film.mp4"><b>播放完整宣传片</b></a> &nbsp;·&nbsp; 1 分 49 秒</sub>
 

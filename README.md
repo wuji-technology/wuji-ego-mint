@@ -1,25 +1,26 @@
 <div align="center">
 
 <!--
-  FULL FILM (1 min 49 s) — the hero wall below doubles as the film's poster:
-  it links to `assets/readme/full_film.mp4` (1280 × 720, 8.5 MB, committed),
-  which GitHub plays in its own blob viewer.
+  FULL FILM (1 min 49 s) — the film comes *after* the hero wall below, on its
+  own line: a link to `assets/readme/full_film.mp4` (1280 × 720, 8.5 MB,
+  committed), which GitHub plays in its own blob viewer. The hero wall stays a
+  plain image — do not fold it into the film's link.
 
   A true *inline* player is only rendered for github.com/user-attachments
   URLs, and those can only be minted through the browser: open any issue or PR
   comment box in this repository, drag the MP4 into it, copy the generated
   https://github.com/user-attachments/assets/...
-  link and paste it on its own line right below this comment — that is the
-  upgrade path if the film should ever play without a click. A <video> tag
-  pointing at a file in this repository is stripped by GitHub's markdown
-  sanitizer and renders as nothing, so the poster link is the best in-repo
-  option.
+  link and paste it on its own line where the "Play the full film" line now
+  sits, just after the hero wall — that is the upgrade path if the film should
+  ever play without a click. A <video> tag pointing at a file in this
+  repository is stripped by GitHub's markdown sanitizer and renders as
+  nothing, so the link is the best in-repo option.
 
   Full-quality master: `out/MINT_full_en_music.mp4` in the promo project,
   1920 × 1080, 76 MB, deliberately not committed.
 -->
 
-<a href="assets/readme/full_film.mp4"><img src="assets/readme/scale.webp" width="100%" alt="108 MINT renders playing at once, one tile per clip — click to play the full film"></a>
+<img src="assets/readme/scale.webp" width="100%" alt="108 MINT renders playing at once, one tile per clip">
 
 <sub>▶ <a href="assets/readme/full_film.mp4"><b>Play the full film</b></a> &nbsp;·&nbsp; 1 min 49 s</sub>
 
