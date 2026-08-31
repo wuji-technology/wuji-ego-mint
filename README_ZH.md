@@ -1,16 +1,23 @@
 <div align="center">
 
 <!--
-  完整宣传片（1 分 41 秒）—— 宣传片放在 README 最上面，位于封面视频墙之前。
-  源文件：宣传片工程里的 out/MINT_full_en.mp4（1920 × 1080，72 MB，特意不入库）。
-  GitHub 只为 github.com/user-attachments 链接渲染内嵌播放器，而这种链接只能通过
-  浏览器上传获得：在本仓库任意 issue / PR 的评论框里把 MP4 拖进去，复制生成的
+  完整宣传片（1 分 49 秒）—— 下面的封面视频墙同时充当宣传片的海报：它链接到
+  assets/readme/full_film.mp4（1280 × 720，8.5 MB，已入库），GitHub 会在自己的
+  blob 页面里播放。
+
+  真正的「内嵌」播放器只对 github.com/user-attachments 链接渲染，而这种链接只能
+  通过浏览器上传获得：在本仓库任意 issue / PR 的评论框里把 MP4 拖进去，复制生成的
   https://github.com/user-attachments/assets/... 链接，单独一行粘贴到这段注释
-  下面。不要把 MP4 提交进仓库 —— 指向仓库文件的 <video> 标签会被 GitHub 的
-  markdown 过滤器整段删掉，页面上什么都不会显示。
+  下面 —— 如果希望宣传片不点击就自动播放，这是升级路径。指向仓库文件的 <video>
+  标签会被 GitHub 的 markdown 过滤器整段删掉，所以海报链接是入库方案里最好的做法。
+
+  全画质母版：宣传片工程里的 out/MINT_full_en_music.mp4（1920 × 1080，76 MB，
+  特意不入库）。
 -->
 
-<img src="assets/readme/scale.webp" width="100%" alt="108 个 MINT 渲染片段同时播放，每格一个片段">
+<a href="assets/readme/full_film.mp4"><img src="assets/readme/scale.webp" width="100%" alt="108 个 MINT 渲染片段同时播放，每格一个片段 —— 点击播放完整宣传片"></a>
+
+<sub>▶ <a href="assets/readme/full_film.mp4"><b>播放完整宣传片</b></a> &nbsp;·&nbsp; 1 分 49 秒</sub>
 
 <h2>MINT：用可扩展的第一视角管线监督<br>训练世界坐标系相机与手部运动的统一模型</h2>
 
