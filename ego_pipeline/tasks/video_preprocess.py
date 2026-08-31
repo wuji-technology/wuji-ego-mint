@@ -54,7 +54,7 @@ def _plan_clips(fps: float, total_frames: int, out_dir: Path,
 @ray.remote
 def preprocess_meta(video_path: str, output_dir: str,
                     input_root: str | None = None) -> dict:
-    from ray_pipeline.backends.long_video import (
+    from ego_pipeline.backends.long_video import (
         CLIP_DURATION_S,
         CLIP_OVERLAP_S,
         LONG_VIDEO_THRESHOLD_S,

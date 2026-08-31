@@ -11,7 +11,7 @@ def prefetch_megasam_alignment(
     focal_px: float,
     depth_base_dir: str | None = None,
 ) -> dict:
-    from ray_pipeline.backends.megasam import compute_depth_alignment
+    from ego_pipeline.backends.megasam import compute_depth_alignment
 
     output_dir = Path(output_dir)
     scene_name = Path(scene_name).name
@@ -39,7 +39,7 @@ def run_megasam_step(
     _sub_events:  list | None = None,
     return_dense: bool = True,
 ) -> tuple[object, object, tuple[int, int] | None, float]:
-    from ray_pipeline.backends.megasam import run as megasam_run
+    from ego_pipeline.backends.megasam import run as megasam_run
 
     output_dir = Path(output_dir)
     scene_name = Path(scene_name).name

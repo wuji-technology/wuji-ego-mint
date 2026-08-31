@@ -26,7 +26,7 @@ def run(
     try:
         import time as _tm
         import torch
-        from ray_pipeline.backends.hawor_no_filler import load_hawor_model, run_stage12
+        from ego_pipeline.backends.hawor_no_filler import load_hawor_model, run_stage12
 
 
         _t0_subprocess = _tm.perf_counter()

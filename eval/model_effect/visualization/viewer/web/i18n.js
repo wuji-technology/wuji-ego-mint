@@ -40,7 +40,7 @@
     ['原始硬切', 'Hard Cut'],
     ['线性融合', 'Linear Blend'],
     ['融合 + UKF平滑', 'Blend + UKF Smoothing'],
-    ['线性融合后，使用 ray_pipeline 数据清理链的相机系 UKF+RTS 双向平滑', 'Apply camera-space UKF + RTS bidirectional smoothing from the ray_pipeline cleaning chain after linear blending.'],
+    ['线性融合后，使用 ego_pipeline 数据清理链的相机系 UKF+RTS 双向平滑', 'Apply camera-space UKF + RTS bidirectional smoothing from the ego_pipeline cleaning chain after linear blending.'],
     ['默认：较轻平滑', 'Default: lighter smoothing'],
     ['建议 q 0.4–1.0、r 0.3–1.0、beta 0.2–3.0；q ↑ 更跟手，r/beta ↑ 更平滑。安全范围 q/r 0.1–2.0、beta 0–5。', 'Suggested: q 0.4–1.0, r 0.3–1.0, beta 0.2–3.0. Higher q follows motion more closely; higher r/beta smooths more. Safe limits: q/r 0.1–2.0, beta 0–5.'],
     ['过程噪声；越大越允许快速运动，平滑越弱', 'Process noise: higher values allow faster motion and reduce smoothing.'],
