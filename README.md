@@ -95,6 +95,7 @@ That is the gap MINT is built to close. **One ordinary RGB video, one 24 GB GPU,
 | ✅ | 1,021-hour structured egocentric dataset (non-video portion) | [Hugging Face](https://huggingface.co/datasets/ZZJAsher/wuji_ego_mint) · [ModelScope](https://www.modelscope.cn/datasets/AsherZhu/wuji_ego_mint) |
 | ✅ | Benchmark implementation and CLI, integrated into the Viewer | `eval/model_effect/benchmark/` |
 | ✅ | EgoPipeline orchestration, cleaning and LeRobot export reference | `ego_pipeline/` |
+| ✅ | Video normalisation and hand-filtering scripts | [`ego_pipeline/preprocessing/`](ego_pipeline/preprocessing/) |
 | ✅ | Wuji hand URDF/MJCF/STL and retargeting | `eval/simulate/wuji-retargeting/` |
 | ✅ | Zero-shot HOT3D / ARCTIC result table (paper Table 1) | [Camera-frame bimanual reconstruction](#camera-frame-bimanual-reconstruction) |
 | ⏳ | Scale-corrected camera trajectories — the released dataset's trajectories are scale-enlarged | The current ones are usable for pretraining, not for metric evaluation. Cause in [Public Ego pretraining data](#️-public-ego-pretraining-data) |
@@ -134,21 +135,6 @@ Place the models and assets used by Quick Start at the paths below. `scripts/dow
 | MANO left- and right-hand models | [MANO website](https://mano.is.tue.mpg.de/) | `assets/mano/mano_right/MANO_RIGHT.pkl`<br>`assets/mano/mano_left/MANO_LEFT.pkl` | Registration and acceptance of the MANO License are required. |
 | LingBot-Map pretrained backbone | [LingBot-Map](https://github.com/robbyant/lingbot-map) | `assets/models/lingbot-map.pt` | Optional; download only when required by the selected configuration. |
 | Wuji Hand URDF, MJCF, and STL | Included in this repository | `eval/simulate/wuji-retargeting/wuji_retargeting/wuji-description/hand/body/` | No additional download is required. |
-
-To reconstruct the Ego data-production pipeline, download the required weights under the terms of each upstream project and place them at these fixed paths:
-
-| Data-pipeline asset | Path in this repository |
-| --- | --- |
-| GeoCalib weights | `model/geocalib/pinhole.tar` |
-| MoGe weights | `model/moge2/model.pt` |
-| Mega-SAM weights | `model/megasam/megasam_final.pth` |
-| HaWoR weights | `model/hawor/hawor.ckpt` |
-| HaWoR configuration | `model/hawor/model_config.yaml` |
-| HaWoR detector | `model/hawor/detector.pt` |
-| DROID-SLAM weights | `third_party/HaWoR/weights/external/droid.pth` |
-| Metric3D weights | `third_party/HaWoR/thirdparty/Metric3D/weights/metric_depth_vit_large_800k.pth` |
-| HaWoR right-hand MANO | `third_party/HaWoR/_DATA/data/mano/MANO_RIGHT.pkl` |
-| HaWoR left-hand MANO | `third_party/HaWoR/_DATA/data_left/mano_left/MANO_LEFT.pkl` |
 
 ### Using the Viewer
 
@@ -200,7 +186,7 @@ One shared encode per frame, four factorized heads, then explicit rigid composit
 
 | Stage | Component | Produces |
 | --- | --- | --- |
-| 00 | preprocessing | validated metadata, one decode per segment, overlapping clips, short/dirty data dropped |
+| 00 | [preprocessing and filtering](ego_pipeline/preprocessing/) | normalise fps/resolution/duration; cut out stretches with no hands or more than two; validate metadata, split overlapping clips |
 | 01 | GeoCalib | camera intrinsics |
 | 02 | MoGe-2 | monocular depth |
 | 03 | MegaSaM / DROID-SLAM | metric camera track |
@@ -401,6 +387,21 @@ If you need to reconstruct the data-generation pipeline, first read [`THIRD_PART
 
 The public release provides an implementation reference, not a one-command reproduction of the production data generator. Use MINT directly for inference; for pipeline reconstruction, supply the licensed upstream code and assets and complete the local integration described in [Data pipeline](docs/data-pipeline.md).
 
+If you do go down this road, the least painful order is: install each upstream project separately by its own instructions and get it running on its own first, then wire them together against the source in `ego_pipeline/`. That wiring step suits an AI coding assistant well — point it at the upstream APIs and at this repository's calling conventions and have it write the compatibility layer. The fixed in-repository paths for each asset are:
+
+| Data-pipeline asset | Path in this repository |
+| --- | --- |
+| GeoCalib weights | `model/geocalib/pinhole.tar` |
+| MoGe weights | `model/moge2/model.pt` |
+| Mega-SAM weights | `model/megasam/megasam_final.pth` |
+| HaWoR weights | `model/hawor/hawor.ckpt` |
+| HaWoR configuration | `model/hawor/model_config.yaml` |
+| HaWoR detector | `model/hawor/detector.pt` |
+| DROID-SLAM weights | `third_party/HaWoR/weights/external/droid.pth` |
+| Metric3D weights | `third_party/HaWoR/thirdparty/Metric3D/weights/metric_depth_vit_large_800k.pth` |
+| HaWoR right-hand MANO | `third_party/HaWoR/_DATA/data/mano/MANO_RIGHT.pkl` |
+| HaWoR left-hand MANO | `third_party/HaWoR/_DATA/data_left/mano_left/MANO_LEFT.pkl` |
+
 ### Train
 
 Only the two configurations associated with the selected checkpoints are kept. `step_00019000` is Stage 1; `step_00004500` is the Stage 2 WorldEngine camera-only adaptation initialized from Stage 1 and is the final fine-tuned checkpoint released publicly:
@@ -469,6 +470,7 @@ mint/
 |-- mint/             CLI, inference engine, renderer, and web viewer
 |-- model_train/      Training engine, model, losses, and LeRobot loader
 |-- ego_pipeline/     Ray scheduling, actors, model backends, trajectory cleanup, manifests, and export
+|   `-- preprocessing/  video normalisation and hand filtering, ahead of the pipeline stages
 |-- scripts/          Reproducible setup, asset, privacy, and sample tools
 `-- third_party/      Redistributable source snapshot; adapted HaWoR is local-only, assets excluded
 ```
