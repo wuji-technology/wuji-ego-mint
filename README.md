@@ -47,9 +47,9 @@ MINT replaces the chain. **One ordinary RGB video, one 24 GB GPU, one forward pa
 - **Structured pipeline amortization.** The multi-stage pipeline stays offline as a supervision generator, and one model learns its final structured state — not logit distillation, but the camera–hand state of an entire non-end-to-end system. Running that system is paid for once, by us, rather than once per user.
 - **Open end to end.** Model weights, training and inference code, the EgoPipeline labeling system, and a filtered **1,021-hour** structured egocentric dataset — reproducible, auditable and yours to extend, not a service you query.
 
-<img src="assets/readme/pipeline_vs_mint.webp" width="100%" alt="Same frames through the multi-stage pipeline and through MINT: the pipeline places both hands away from the real hands, MINT keeps them on the hands">
+<img src="assets/readme/pipeline_vs_mint.webp" width="100%" alt="Same frames through the conventional ego pipeline and through MINT: the pipeline places both hands away from the real hands, MINT keeps them on the hands">
 
-<div align="center"><sub>Same frames, same overlay renderer. Left: the input. Middle: the conventional five-stage route, whose output is <b>pseudo-label, not ground truth</b>. Right: MINT, one forward pass.</sub></div>
+<div align="center"><sub>Same frames, same overlay renderer. Left: the input. Middle: the conventional ego pipeline, whose output is <b>pseudo-label, not ground truth</b>. Right: MINT, one forward pass.</sub></div>
 
 ---
 

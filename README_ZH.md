@@ -44,9 +44,9 @@ MINT 把这条链换掉：**一段普通 RGB 视频、一张 24 GB 显存的显�
 - **结构化管线摊销（structured pipeline amortization）。** 多级管线留在线下，只作监督信号的生成器，再用一个模型去学它最终那份结构化状态 —— 这不是 logit 蒸馏，学的是一整套非端到端系统的相机–手部状态。跑这套系统的代价由我们付一次，而不是每个使用者各付一次。
 - **端到端开源。** 模型权重、训练与推理代码、EgoPipeline 标注系统，以及经过严格过滤的 **1,021 小时**结构化第一视角数据集 —— 可复现、可审查、可以自己接着改，而不是一个只能调用的服务。
 
-<img src="assets/readme/pipeline_vs_mint.webp" width="100%" alt="同一批帧分别经过多级管线和 MINT：管线把两只手都放错了位置，MINT 保持贴合">
+<img src="assets/readme/pipeline_vs_mint.webp" width="100%" alt="同一批帧分别经过传统 ego 管线和 MINT：管线把两只手都放错了位置，MINT 保持贴合">
 
-<div align="center"><sub>同一批帧，同一套叠加渲染。左：输入。中：传统五级路线，其输出是<b>伪标签，不是真值</b>。右：MINT，一次前向。</sub></div>
+<div align="center"><sub>同一批帧，同一套叠加渲染。左：输入。中：传统 ego 管线，其输出是<b>伪标签，不是真值</b>。右：MINT，一次前向。</sub></div>
 
 ---
 
