@@ -74,3 +74,6 @@ data/samples/*
 *.safetensors
 *.onnx
 wandb/
+
+# Dataset cards are uploaded to Hugging Face / ModelScope by hand, not tracked here
+docs/dataset-card/
