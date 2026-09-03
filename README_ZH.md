@@ -137,7 +137,7 @@ Viewer 启动后会自动在默认浏览器打开 `http://127.0.0.1:8011`，然�
 2. 点击 **加载模型**，等待模型状态变为就绪。
 3. 选择 LeRobot episode 或 Ego 视角的 MP4 视频，并设置相机推理、手部拼窗和几何参数。
 4. 点击 **开始推理**。
-5. 查看同步的 GT/Pred 2D、固定世界和当前相机 3D、逐帧数值、loss、导出及可选 benchmark 工具。
+5. 查看同步的 GT/Pred 2D、固定世界和当前相机 3D、逐帧数值、loss、导出及可选 benchmark 工具。导出菜单既可把所选画面合成一支网格 MP4，也可将 2D、固定世界 3D、MuJoCo 和 Wuji Hand 的 GT/PRED 结果分别导出为 8 支独立 MP4，并打包为 ZIP 下载。
 
 ![MINT Web Viewer 加载模型并完成推理后的界面](data/samples/mint-web-viewer.png)
 

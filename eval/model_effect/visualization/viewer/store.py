@@ -14,6 +14,7 @@ import hashlib
 import os
 import threading
 import time
+import zipfile
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, as_completed, wait
 from pathlib import Path
 
@@ -30,6 +31,7 @@ _ANSI = _re.compile(r"\x1b\[[0-9;]*[A-Za-z]")   # 去 \033[K 等 ANSI(面板 <pr
 _EXPORT_TILE_SIZE = (960, 540)
 _EXPORT_GRID_COLUMNS = 4
 _EXPORT_COMPOSE_TAG = "source_sized_tiles_v7_four_columns_two_rows"
+_EXPORT_BUNDLE_TAG = "individual_gt_pred_v1"
 
 
 def _export_grid_layout(count: int, tile_width: int, tile_height: int):
@@ -2711,6 +2713,63 @@ class Store:
             temp_path.replace(output_path)
         return output_path
 
+    def _bundle_export(self, inputs: list[tuple[str, Path]], *,
+                       episode_index: int,
+                       default_source: str = "pred") -> Path:
+        """Package the selected GT/PRED renders as individual MP4 files."""
+        if not inputs:
+            raise ValueError("至少选择一路导出画面")
+        if default_source not in {"gt", "pred"}:
+            raise ValueError(f"不支持的默认导出数据源: {default_source}")
+        filename_parts = {
+            "both_2d": "2d",
+            "world_motion_3d": "world",
+            "mujoco_3d": "mujoco",
+            "wuji_retarget_3d": "retarget",
+        }
+        signature = [_EXPORT_BUNDLE_TAG, f"episode={int(episode_index)}"]
+        files = []
+        for source_id, path in inputs:
+            path = Path(path)
+            if not path.is_file() or path.stat().st_size == 0:
+                raise RuntimeError(f"导出源视频不存在或为空: {path}")
+            source = next((name for name in filename_parts if source_id == name or
+                           source_id.startswith(f"{name}_")), None)
+            if source is None:
+                raise ValueError(f"不支持的独立导出画面: {source_id}")
+            suffix = source_id[len(source):].lstrip("_") or default_source
+            if suffix not in {"gt", "pred"}:
+                raise ValueError(f"不支持的独立导出数据源: {source_id}")
+            archive_name = (
+                f"ep{int(episode_index):03d}-{filename_parts[source]}-{suffix}.mp4")
+            stat = path.stat()
+            signature.append(
+                f"{archive_name}:{path.resolve()}:{stat.st_size}:{stat.st_mtime_ns}")
+            files.append((archive_name, path))
+
+        digest = hashlib.sha256("\n".join(signature).encode()).hexdigest()[:20]
+        output_dir = Path(self.cache_dir) / "exports"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / (
+            f"ep{int(episode_index):03d}_individual_videos_{digest}.zip")
+        if output_path.exists() and output_path.stat().st_size > 0:
+            return output_path
+
+        with self._key_lock(f"export-bundle:{digest}"):
+            if output_path.exists() and output_path.stat().st_size > 0:
+                return output_path
+            temp_path = output_dir / f".{output_path.name}.tmp"
+            temp_path.unlink(missing_ok=True)
+            try:
+                with zipfile.ZipFile(temp_path, "w", compression=zipfile.ZIP_STORED) as archive:
+                    for archive_name, path in files:
+                        archive.write(path, archive_name)
+                temp_path.replace(output_path)
+            except Exception:
+                temp_path.unlink(missing_ok=True)
+                raise
+        return output_path
+
     def export_video(self, eid: int, sources: list[str], *, mode: str,
                      layout: str = "overlay", content: str = "both",
                      cam_mode: str = DEFAULT_CAM_MODE,
@@ -2723,8 +2782,9 @@ class Store:
                      show_traj: bool = True,
                      show_cam_hand: bool = True,
                      raw: bool = False,
+                     output_format: str = "grid",
                      on_progress=None) -> Path:
-        """Render only missing server videos, then export selected views as one MP4."""
+        """Render missing videos, then export a grid MP4 or individual-video ZIP."""
         allowed = {"both_2d", "world_motion_3d", "mujoco_3d", "wuji_retarget_3d"}
         ordered = list(dict.fromkeys(sources))
         unknown = [source_id for source_id in ordered if source_id not in allowed]
@@ -2732,6 +2792,8 @@ class Store:
             raise ValueError(f"不支持的导出画面: {', '.join(unknown)}")
         if not ordered:
             raise ValueError("至少选择一路导出画面")
+        if output_format not in {"grid", "separate"}:
+            raise ValueError(f"不支持的导出格式: {output_format}")
 
         labels = {
             "both_2d": "原视频渲染",
@@ -2935,11 +2997,18 @@ class Store:
                 for future in as_completed(futures):
                     rendered_by_index[futures[future]] = future.result()
         rendered = [item for group in rendered_by_index if group for item in group]
+        separate = output_format == "separate"
         emit(stage="compose", progress=0.92, source_index=source_count,
-             source_total=source_count, message="所选画面渲染完成，正在合成导出视频")
-        output = self._compose_export(rendered, tile_size=export_tile_size)
+             source_total=source_count,
+             message=("所选画面渲染完成，正在打包独立视频" if separate
+                      else "所选画面渲染完成，正在合成导出视频"))
+        output = (self._bundle_export(
+            rendered, episode_index=int(raw_data["episode_index"]),
+            default_source=source) if separate
+                  else self._compose_export(rendered, tile_size=export_tile_size))
         emit(stage="done", progress=1.0, source_index=source_count,
-             source_total=source_count, message="导出视频已生成")
+             source_total=source_count,
+             message="独立视频包已生成" if separate else "导出视频已生成")
         return output
 
     def mp4_gt(self, eid: int, mode: str, on_step=None,

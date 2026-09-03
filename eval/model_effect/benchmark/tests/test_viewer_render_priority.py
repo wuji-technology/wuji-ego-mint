@@ -1,5 +1,6 @@
 import sys
 import threading
+import zipfile
 from pathlib import Path
 
 
@@ -36,6 +37,51 @@ def test_export_defaults_to_all_four_server_rendered_views():
     for source_id in ("both_2d", "world_motion_3d", "mujoco_3d", "wuji_retarget_3d"):
         assert f'data-export-source="{source_id}" checked' in html
     assert "导出选中 4 路" in html
+    assert 'id="exportSeparateBtn"' in html
+    assert "output_format:outputFormat" in source
+
+
+def test_individual_export_bundle_contains_named_gt_pred_videos(tmp_path):
+    from visualization.viewer.store import Store
+
+    store = Store.__new__(Store)
+    store.cache_dir = tmp_path / "cache"
+    store._locks = {}
+    store._reg_lock = threading.Lock()
+    inputs = []
+    for source in ("both_2d", "world_motion_3d", "mujoco_3d", "wuji_retarget_3d"):
+        for kind in ("gt", "pred"):
+            path = tmp_path / f"{source}_{kind}.mp4"
+            path.write_bytes(f"{source}:{kind}".encode())
+            inputs.append((f"{source}_{kind}", path))
+
+    output = store._bundle_export(inputs, episode_index=7)
+
+    assert output.suffix == ".zip"
+    with zipfile.ZipFile(output) as archive:
+        assert archive.namelist() == [
+            "ep007-2d-gt.mp4", "ep007-2d-pred.mp4",
+            "ep007-world-gt.mp4", "ep007-world-pred.mp4",
+            "ep007-mujoco-gt.mp4", "ep007-mujoco-pred.mp4",
+            "ep007-retarget-gt.mp4", "ep007-retarget-pred.mp4",
+        ]
+
+
+def test_individual_raw_export_uses_gt_filename(tmp_path):
+    from visualization.viewer.store import Store
+
+    store = Store.__new__(Store)
+    store.cache_dir = tmp_path / "cache"
+    store._locks = {}
+    store._reg_lock = threading.Lock()
+    source = tmp_path / "world.mp4"
+    source.write_bytes(b"raw world render")
+
+    output = store._bundle_export(
+        [("world_motion_3d", source)], episode_index=2, default_source="gt")
+
+    with zipfile.ZipFile(output) as archive:
+        assert archive.namelist() == ["ep002-world-gt.mp4"]
 
 
 def test_export_renders_overall_2d_before_robot_views_and_keeps_layout_order(tmp_path):

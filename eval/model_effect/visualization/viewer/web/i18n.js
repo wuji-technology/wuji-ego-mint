@@ -89,6 +89,7 @@
     ['固定世界 · 3D（跟随视频）', 'Fixed World · 3D (follows video)'],
     ['Wuji Hand · Retargeting', 'Wuji Hand · Retargeting'],
     ['有 GT 时两排八格：2D、3D、MuJoCo、Wuji 均为 GT/PRED', 'With ground truth, export uses eight tiles across two rows: GT/PRED for 2D, 3D, MuJoCo, and Wuji.'],
+    ['下载 GT/PRED 独立视频（ZIP）', 'Download Individual GT/PRED Videos (ZIP)'],
     ['加载样本后可导出', 'Load a sample to enable export.'],
     ['导出时由服务端渲染并缓存', 'The server will render and cache this view during export.'],
     ['所选画面当前不可导出：', 'The selected views are not currently exportable: '],

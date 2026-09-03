@@ -27,6 +27,11 @@ The viewer provides:
 - frame values, configured losses, cancellation, and video/frame export;
 - optional MuJoCo and Wuji Hand panels when their dependencies/assets exist.
 
+For a LeRobot episode with ground truth, the four selected export categories
+(2D, fixed-world 3D, MuJoCo, and Wuji Hand) can be downloaded either as one
+four-column grid MP4 or as a ZIP containing eight individual GT/prediction MP4
+files. Prediction-only videos export one file per selected category.
+
 The viewer is a resident process. Optional `--compile-mode` and `--fp8-mode`
 settings apply to repeated workloads; leave them unset for the default eager
 execution path.
