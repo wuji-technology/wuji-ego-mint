@@ -353,6 +353,19 @@ select:disabled, input:disabled { opacity: .5; }
 .export-sources-menu label.unavailable { color: #71847c; }
 .export-sources-menu input { accent-color: var(--acid); }
 .export-sources-hint { padding-top: 5px; border-top: 1px solid var(--line-soft); color: var(--mut); font-size: 10px; }
+#exportSeparateBtn {
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 1px solid rgba(185, 244, 90, .45);
+  border-radius: 8px;
+  background: rgba(185, 244, 90, .08);
+  color: var(--acid);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 750;
+}
+#exportSeparateBtn:hover:not(:disabled) { background: rgba(185, 244, 90, .15); border-color: var(--acid); }
+#exportSeparateBtn:disabled { opacity: .4; cursor: not-allowed; }
 #exportBtn {
   position: relative;
   min-height: 39px;

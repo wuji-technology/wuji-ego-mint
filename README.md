@@ -140,7 +140,7 @@ The Viewer automatically opens `http://127.0.0.1:8011` in the default browser. T
 2. Click **Load Model** and wait until the model status is ready.
 3. Select a LeRobot episode or an egocentric MP4 video, then choose the camera-inference, hand-window, and geometry settings.
 4. Click **Start Inference**.
-5. Inspect the synchronized GT/Pred 2D view, fixed-world and camera-frame 3D panels, per-frame values, losses, exports, and optional benchmark tools.
+5. Inspect the synchronized GT/Pred 2D view, fixed-world and camera-frame 3D panels, per-frame values, losses, exports, and optional benchmark tools. The export menu can either compose the selected views into one grid MP4 or download 2D, fixed-world 3D, MuJoCo, and Wuji Hand GT/Pred renders as eight individual MP4 files in a ZIP.
 
 ![MINT Web Viewer after loading the model and running inference](data/samples/mint-web-viewer.png)
 

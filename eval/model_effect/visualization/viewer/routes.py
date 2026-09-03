@@ -854,8 +854,12 @@ def create_app(store) -> Flask:
         show_cam_hand = body.get("show_cam_hand", True)
         if not isinstance(show_traj, bool) or not isinstance(show_cam_hand, bool):
             abort(400, "固定世界显示参数无效")
+        output_format = body.get("output_format", "grid")
+        if output_format not in {"grid", "separate"}:
+            abort(400, "导出文件格式无效")
         source_tag = "_".join(str(source) for source in dict.fromkeys(sources))
-        filename = f"wuji_{source_tag}.mp4"
+        filename = (f"wuji_item_{eid:03d}_individual_videos.zip"
+                    if output_format == "separate" else f"wuji_{source_tag}.mp4")
         token = uuid.uuid4().hex
         options = {
             "mode": mode,
@@ -871,6 +875,7 @@ def create_app(store) -> Flask:
             "show_traj": show_traj,
             "show_cam_hand": show_cam_hand,
             "raw": bool(body.get("raw")),
+            "output_format": output_format,
         }
         with export_lock:
             export_jobs[token] = {
@@ -936,8 +941,7 @@ def create_app(store) -> Flask:
             abort(404, "导出视频不存在或已过期")
         path, filename = exported
         return send_file(
-            path, mimetype="video/mp4", as_attachment=True,
-            download_name=filename, conditional=True)
+            path, as_attachment=True, download_name=filename, conditional=True)
 
     @app.get("/video/<int:eid>")
     def video(eid: int):

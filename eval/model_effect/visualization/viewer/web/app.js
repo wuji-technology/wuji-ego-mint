@@ -494,7 +494,7 @@ async function init(){
   $('#mujocoBtn').onclick = toggleMujocoPanel;
   $('#retargetBtn').onclick = toggleRetargetPanel;
   wireFrameCapturePicker();
-  $('#exportBtn').onclick = exportVideo;
+  $('#exportBtn').onclick = ()=>exportVideo('grid');
   wireExportPicker();
   updateExportButton();
   updateLoadBtn();                           // 首屏：未加载 → 禁用「推理」、放开「加载模型」
@@ -1320,6 +1320,8 @@ function updateExportPicker(){
         :(item.rendered?'已渲染，导出时直接复用':'导出时由服务端渲染并缓存');
     }
   });
+  const separate=$('#exportSeparateBtn');
+  if(separate) separate.disabled=state.exporting||!state.loaded||!state.exportSelection.size;
 }
 
 function _setExportPickerOpen(open){
@@ -1368,6 +1370,11 @@ function wireExportPicker(){
       updateExportButton();
     };
   });
+  const separate=$('#exportSeparateBtn');
+  if(separate) separate.onclick=event=>{
+    event.stopPropagation();
+    exportVideo('separate');
+  };
   document.addEventListener('click',event=>{
     if(!picker.contains(event.target)) _setExportPickerOpen(false);
   });
@@ -1409,8 +1416,9 @@ function hideExportProgress(){
   if(wrap){ wrap.hidden=true; wrap.classList.remove('done','error'); }
 }
 
-async function exportVideo(){
+async function exportVideo(outputFormat='grid'){
   if(state.exporting) return;
+  if(!['grid','separate'].includes(outputFormat)) outputFormat='grid';
   const sources=_selectedExportSources();
   if(!sources.length){ info.textContent='请至少选择一个导出画面'; return; }
   const missing=sources.filter(item=>!item.available);
@@ -1434,6 +1442,7 @@ async function exportVideo(){
         world_coord_mode:state.worldCoordMode,
         show_traj:state.showTraj, show_cam_hand:state.showCamHand,
         raw:state.rawOnly,
+        output_format:outputFormat,
       }),
     });
     if(!response.ok) throw new Error((await response.text()).replace(/<[^>]+>/g,' ').trim()||`HTTP ${response.status}`);
@@ -1454,7 +1463,8 @@ async function exportVideo(){
     anchor.href=U(result.download); anchor.download=result.filename||'';
     document.body.appendChild(anchor); anchor.click(); anchor.remove();
     completed=true; setExportProgress(1,'导出完成，已开始下载','done');
-    info.textContent='导出完成：'+sources.map(item=>item.label).join(' + ');
+    info.textContent=(outputFormat==='separate'?'独立视频已打包：':'导出完成：')+
+      sources.map(item=>item.label).join(' + ');
   }catch(error){
     setExportProgress(state.exportProgress,'导出失败：'+error.message,'error');
     info.textContent='导出失败：'+error.message;
