@@ -6,7 +6,7 @@ hand_reproj.py（离线导出 mp4）与 viewer_web.py（网页端按需渲染缓
   · 预测 hand[T,218] → 与 GT 同 schema 的双手 6D；
   · 6D → 世界系 MANO verts/joints；
   · 单帧 sides 组装 + RGB→BGR；
-  · render_compare_overlay：lerobot 单 episode「GT｜Pred 并排」mp4；
+  · render_compare_overlay：lerobot 单 episode「GT｜PRED 并排」mp4；
   · render_pred_overlay：裸视频「仅预测」mp4。
 两个 overlay 写完就地转 H.264，返回 out_path。
 """
@@ -24,7 +24,7 @@ from . import draw
 # 每手 218→2×109 的切片（与 data/lerobot_v3.py 的 cat 顺序一致）。
 _PER_HAND = 109
 _HAND_SLICES = {"transl_cam": (0, 3), "orient6d": (3, 9), "pose6d": (9, 99), "betas": (99, 109)}
-CACHE_TAG = "allpred_2d_v5_web"   # v5: bounded bitrate + short GOP for smooth remote playback
+CACHE_TAG = "allpred_2d_v6_explicit_presence"
 _RENDER_WORKERS = max(1, int(os.environ.get("VIEWER_RENDER_WORKERS") or min(2, os.cpu_count() or 2)))
 _RENDER_INFLIGHT = max(
     _RENDER_WORKERS,
@@ -186,7 +186,7 @@ def _presence_at(presence: np.ndarray | None, frame_idx: int):
 def render_compare_overlay(raw: dict, pred: dict, out_path, *,
                            mode: str = "mesh_skel", alpha: float = 0.6,
                            fps: float = 30.0, progress: bool = True) -> Path:
-    """lerobot 单 episode「GT｜Pred 并排」overlay mp4，写完转 H.264，返回 out_path。
+    """lerobot 单 episode「GT｜PRED 并排」overlay mp4，写完转 H.264，返回 out_path。
 
     raw:  load_episode_raw 产物（frames/cam_c2w/K/kept/hands）。
     pred: predictor.predict 产物（pose_enc[T,9]，可选 hand[T,218]）。
@@ -203,7 +203,7 @@ def render_compare_overlay(raw: dict, pred: dict, out_path, *,
     gt_kept = raw["kept"]                         # (T,2)
     has_hand = "hand" in pred
     pred_c2w, pred_K = geom.decode_camera_pose_enc(pred["pose_enc"], H, W)
-    # 模型的 hand 输出定义在预测相机系；Pred 路径从解算到投影只使用预测值。
+    # 模型的 hand 输出定义在预测相机系；PRED 路径从解算到投影只使用预测值。
     pred_world = (hands_to_world(
         pred_hand_to_schema(pred["hand"]), pred_c2w, "camera"
     ) if has_hand else None)
@@ -230,8 +230,8 @@ def render_compare_overlay(raw: dict, pred: dict, out_path, *,
                                             pr_sides, faces_lr, mode=mode, alpha=alpha)
         else:
             right_panel = base_bgr.copy()
-        draw.label(right_panel, "Pred")
-        draw.presence_label(right_panel, [("Pred", *_presence_at(pred_kept, i))])
+        draw.label(right_panel, "PRED")
+        draw.presence_label(right_panel, [("PRED", *_presence_at(pred_kept, i))])
 
         canvas = np.full((H, W * 2 + sep, 3), 32, dtype=np.uint8)
         canvas[:, :W] = left_panel
@@ -251,8 +251,8 @@ def render_2d(raw: dict, pred: dict, out_path, *,
               gt_world_data=None, pred_world_data=None) -> Path:
     """lerobot 单 episode 端到端 2D 重投影，写完转 H.264。
 
-    GT 路只使用 GT 手、存在性、相机外参和内参；Pred 路只使用对应预测值。layout：
-    overlay=同一画面叠加（GT 绿 / Pred 红）；side=左右并排。模型无 hand 输出时只画 GT。
+    GT 路只使用 GT 手、存在性、相机外参和内参；PRED 路只使用对应预测值。layout：
+    overlay=同一画面叠加（GT 绿 / PRED 红）；side=左右并排。模型无 hand 输出时只画 GT。
     """
     if content != "both":
         raise ValueError(f"2D 重投影只支持端到端 content='both'，收到 {content!r}")
@@ -282,7 +282,7 @@ def render_2d(raw: dict, pred: dict, out_path, *,
     def gt_kept_fn(i):  return (bool(gt_kept[i, 0]), bool(gt_kept[i, 1]))
     def pred_kept_fn(i): return (bool(pred_render[i, 0]), bool(pred_render[i, 1]))
     A = (gt_world, gt_c2w, gt_K, gt_kept_fn, "GT")
-    B = (pred_world, pred_c2w, pred_K, pred_kept_fn, "Pred") if pred_world is not None else None
+    B = (pred_world, pred_c2w, pred_K, pred_kept_fn, "PRED") if pred_world is not None else None
 
     def draw_src(panel, src, i, palette):
         world, c2w, K, vfn, _lbl = src
@@ -303,7 +303,7 @@ def render_2d(raw: dict, pred: dict, out_path, *,
                 right = draw_src(base, B, i, None); draw.label(right, B[4])
             else:
                 right = base.copy(); draw.label(right, "-")
-            draw.presence_label(right, [("Pred", *_presence_at(pred_kept, i))])
+            draw.presence_label(right, [("PRED", *_presence_at(pred_kept, i))])
             canvas = np.full((H, W * 2 + sep, 3), 32, dtype=np.uint8)
             canvas[:, :W] = left; canvas[:, W + sep:] = right
             return canvas
@@ -314,7 +314,7 @@ def render_2d(raw: dict, pred: dict, out_path, *,
             draw.label(panel, f"{A[4]}(green) | {(B[4] if B else '-')}(red)")
             draw.presence_label(panel, [
                 ("GT", gt_kept[i, 0], gt_kept[i, 1]),
-                ("Pred", *_presence_at(pred_kept, i)),
+                ("PRED", *_presence_at(pred_kept, i)),
             ])
             return panel
 
@@ -329,7 +329,9 @@ def render_2d(raw: dict, pred: dict, out_path, *,
 def render_gt_overlay(raw: dict, out_path, *,
                       mode: str = "mesh_skel", alpha: float = 0.6,
                       fps: float = 30.0, progress: bool = True, on_step=None,
-                      betas_mean: bool = False, gt_world_data=None) -> Path:
+                      betas_mean: bool = False, gt_world_data=None,
+                      label_text: str = "GT",
+                      presence_text: str | None = None) -> Path:
     """单 episode「仅 GT」overlay mp4（GT 手 + GT 相机，不涉及任何模型预测），写完转 H.264。
 
     供网页端「仅原始数据」模式用：只看原始标注的手/相机重投影效果，无需 ckpt / 不跑推理。
@@ -354,8 +356,9 @@ def render_gt_overlay(raw: dict, out_path, *,
         sides = panel_sides(gt_world, i, gt_kept[i, 0], gt_kept[i, 1])
         panel = draw.render_frame(to_bgr(frames[i]), gt_c2w[i], gt_K, sides,
                                   faces_lr, mode=mode, alpha=alpha)
-        draw.label(panel, "GT")
-        draw.presence_label(panel, [("GT", gt_kept[i, 0], gt_kept[i, 1])])
+        draw.label(panel, label_text)
+        presence_name = label_text if presence_text is None else presence_text
+        draw.presence_label(panel, [(presence_name, gt_kept[i, 0], gt_kept[i, 1])])
         return panel
 
     _write_rendered_frames(
@@ -401,13 +404,13 @@ def render_pred_overlay(frames: np.ndarray, pred: dict, out_path, *,
             pred_world, i, pred_render[i, 0], pred_render[i, 1]
         )
         panel = draw.render_frame(base_bgr, pred_c2w[i], pred_K, sides, faces_lr, mode=mode, alpha=alpha)
-        draw.label(panel, "Pred")
-        draw.presence_label(panel, [("Pred", *_presence_at(pred_kept, i))])
+        draw.label(panel, "PRED")
+        draw.presence_label(panel, [("", *_presence_at(pred_kept, i))])
         return panel
 
     _write_rendered_frames(
         vw, T, render_one, on_step=on_step, progress=progress,
-        label="Pred 渲染",
+        label="PRED 渲染",
     )
     vw.close()
     return out_path

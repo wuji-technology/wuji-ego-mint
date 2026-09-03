@@ -21,8 +21,68 @@
       "frames": 450,
       "video": "videos/observation.images.ego/chunk-000/file-001.mp4",
       "sha256": "e40979490bca355a275bfd7f358a9367df8885c808f24b2e95bb50c97149223a"
+    },
+    {
+      "episode_index": 2,
+      "source": "hot3d",
+      "source_dataset_index": 29,
+      "source_frame_start": 1712,
+      "source_frame_stop": 2162,
+      "frames": 450,
+      "video": "videos/observation.images.ego/chunk-000/file-002.mp4",
+      "sha256": "27beac85cac4454ac2be0136bf464cd2818598214be5e8f39fa75092e98eeaee"
+    },
+    {
+      "episode_index": 3,
+      "source": "hot3d",
+      "source_dataset_index": 14,
+      "source_frame_start": 1593,
+      "source_frame_stop": 2043,
+      "frames": 450,
+      "video": "videos/observation.images.ego/chunk-000/file-003.mp4",
+      "sha256": "3372693f4b1c8b8d0c7949122304cdd3ce4d9bb4def99674392b2b1027a2b0e5"
+    },
+    {
+      "episode_index": 4,
+      "source": "hot3d",
+      "source_dataset_index": 58,
+      "source_frame_start": 1578,
+      "source_frame_stop": 2028,
+      "frames": 450,
+      "video": "videos/observation.images.ego/chunk-000/file-004.mp4",
+      "sha256": "089156f77c4e813c30234c104f833e4657e41c00c9afdfdecf8d37154062a7f0"
+    },
+    {
+      "episode_index": 5,
+      "source": "hot3d",
+      "source_dataset_index": 49,
+      "source_frame_start": 1604,
+      "source_frame_stop": 2054,
+      "frames": 450,
+      "video": "videos/observation.images.ego/chunk-000/file-005.mp4",
+      "sha256": "11bf2c7eb81c6e62e8dc1f9ec8fa04b5952ed6db2ede887f247f79bc53294bb6"
+    },
+    {
+      "episode_index": 6,
+      "source": "hot3d",
+      "source_dataset_index": 60,
+      "source_frame_start": 2112,
+      "source_frame_stop": 2562,
+      "frames": 450,
+      "video": "videos/observation.images.ego/chunk-000/file-006.mp4",
+      "sha256": "1fe1c098c4d36aeb40e067aa1c5e3412af28a5db14308dbbb753b08693bb5de0"
+    },
+    {
+      "episode_index": 7,
+      "source": "hot3d",
+      "source_dataset_index": 83,
+      "source_frame_start": 1672,
+      "source_frame_stop": 2122,
+      "frames": 450,
+      "video": "videos/observation.images.ego/chunk-000/file-007.mp4",
+      "sha256": "2fc0a01ab5ad6bfebac6110d6030727ea5a0efc5c78f1f6480f2490b551a75ba"
     }
   ],
-  "total_frames": 900,
-  "total_bytes_excluding_manifest": 5905099
+  "total_frames": 3600,
+  "total_bytes_excluding_manifest": 21223700
 }

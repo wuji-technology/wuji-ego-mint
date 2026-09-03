@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 def get_video_info_step(video_path: str) -> tuple[float, float, int]:
-    from ray_pipeline.backends.long_video import get_video_info
+    from ego_pipeline.backends.long_video import get_video_info
     return get_video_info(video_path)
 
 

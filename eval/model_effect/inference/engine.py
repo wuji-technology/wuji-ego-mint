@@ -65,7 +65,8 @@ DEFAULT_HAND_WINDOW_MODE = "hard"
 CAMERA_INFERENCE_MODES = ("chunked", "max_chunked", "streaming", "full")
 
 
-def _postprocess_hands(result: dict, hand_mode: str) -> bool:
+def _postprocess_hands(result: dict, hand_mode: str,
+                       ukf_params: dict | None = None) -> bool:
     """Apply the production camera-frame UKF+RTS smoother after window blending."""
     if hand_mode != "smooth" or result.get("hand") is None:
         return False
@@ -74,7 +75,7 @@ def _postprocess_hands(result: dict, hand_mode: str) -> bool:
     valid = ((np.asarray(logits) >= 0.0) if logits is not None else
              ((np.asarray(confidence) >= 0.5) if confidence is not None else None))
     from .hand_smoothing import smooth_hand_output
-    result["hand"] = smooth_hand_output(result["hand"], valid)
+    result["hand"] = smooth_hand_output(result["hand"], valid, **(ukf_params or {}))
     return True
 
 
@@ -663,10 +664,15 @@ class StudentEngine:
         import torch
         from data.transforms import preprocess_frames   # noqa: E402  (model_train，与训练同预处理)
 
-        if hand_mode not in HAND_WINDOW_MODES:
+        from .hand_smoothing import parse_hand_smoothing_mode
+        requested_hand_mode = str(hand_mode)
+        try:
+            hand_mode, ukf_params = parse_hand_smoothing_mode(requested_hand_mode)
+        except (TypeError, ValueError) as exc:
             raise ValueError(
-                f"未知 hand_mode: {hand_mode!r}，可选值: {', '.join(HAND_WINDOW_MODES)}"
-            )
+                f"未知 hand_mode: {requested_hand_mode!r}，可选值: "
+                f"{', '.join(HAND_WINDOW_MODES)}；smooth 可携带 q/r/beta"
+            ) from exc
         if cam_mode not in CAMERA_INFERENCE_MODES:
             raise ValueError(
                 f"未知 cam_mode: {cam_mode!r}，可选值: {', '.join(CAMERA_INFERENCE_MODES)}"
@@ -725,7 +731,7 @@ class StudentEngine:
                 logits = out["hand_presence_logits"][0].astype(np.float32)
                 res["hand_presence_logits"] = logits
                 res["hand_confidence"] = _sigmoid_np(logits)
-            hand_smoothed = _postprocess_hands(res, hand_mode)
+            hand_smoothed = _postprocess_hands(res, hand_mode, ukf_params)
             if on_step is not None:
                 try:
                     on_step(1, 1)
@@ -747,6 +753,7 @@ class StudentEngine:
                 "devices": [str(self.device)],
                 "window_overlap": 0,
                 "hand_mode": hand_mode,
+                "ukf_params": ukf_params if hand_smoothed else None,
                 "hand_postprocess": "ukf_cam_rts" if hand_smoothed else "none",
                 "persistent_kv_cache": False,
                 "full_max_frames": self.full_max_frames,
@@ -861,7 +868,7 @@ class StudentEngine:
                     logits = (presence_sum / np.maximum(presence_weight, 1e-8)).astype(np.float32)
                     res["hand_presence_logits"] = logits
                     res["hand_confidence"] = _sigmoid_np(logits)
-            hand_smoothed = _postprocess_hands(res, hand_mode)
+            hand_smoothed = _postprocess_hands(res, hand_mode, ukf_params)
             res["_timings"] = {
                 "preprocess_s": preprocess_s,
                 "forward_s": time.perf_counter() - t0,
@@ -869,6 +876,7 @@ class StudentEngine:
                 "window_batch_size": 1,
                 "window_overlap": overlap if (self.has_hand or self.has_hand_presence) else 0,
                 "hand_mode": hand_mode,
+                "ukf_params": ukf_params if hand_smoothed else None,
                 "hand_postprocess": "ukf_cam_rts" if hand_smoothed else "none",
                 **self.acceleration_metadata,
             }
@@ -1046,7 +1054,7 @@ class StudentEngine:
             logits = (presence_sum / np.maximum(presence_weight, 1e-8)).astype(np.float32)
             res["hand_presence_logits"] = logits
             res["hand_confidence"] = _sigmoid_np(logits)
-        hand_smoothed = _postprocess_hands(res, hand_mode)
+        hand_smoothed = _postprocess_hands(res, hand_mode, ukf_params)
         res["_timings"] = {
             "preprocess_s": preprocess_s,
             "forward_s": t_fwd,
@@ -1058,6 +1066,7 @@ class StudentEngine:
             "devices": self.parallel_device_names,
             "window_overlap": overlap,
             "hand_mode": hand_mode,
+            "ukf_params": ukf_params if hand_smoothed else None,
             "hand_postprocess": "ukf_cam_rts" if hand_smoothed else "none",
             "inference_mode": cam_mode,
             "window_size": W,

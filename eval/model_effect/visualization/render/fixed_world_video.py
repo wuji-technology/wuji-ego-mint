@@ -13,7 +13,7 @@ import numpy as np
 from . import draw
 
 
-CACHE_TAG = "fixed_world_canvas_v5"
+CACHE_TAG = "fixed_world_canvas_v7_clean_export_hud"
 DEFAULT_SIZE = (960, 540)
 COORD_MODES = ("z_up", "opencv")
 DEFAULT_COORD_MODE = "z_up"
@@ -33,6 +33,8 @@ GRID_MAJOR_EVERY = 5
 GROUND_CLEARANCE = 0.28     # 地面放在最低手点下方 max(15cm, GROUND_CLEARANCE×半径)
 SHADOW_ALPHA = 0.55
 HUD_ALPHA = 0.78
+AXIS_ALPHA = 0.28
+AXIS_LABEL_ALPHA = 0.68
 
 
 def _bgr(value: str) -> tuple[int, int, int]:
@@ -219,6 +221,34 @@ def _draw_polyline(frame: np.ndarray, points: list, color, thickness: int,
         previous = point
 
 
+def _draw_axis_labels(frame: np.ndarray, labels: list, ss: float) -> None:
+    """Draw positive-axis labels last so camera/hand overlays cannot hide them."""
+    if not labels:
+        return
+    height, width = frame.shape[:2]
+    layer = frame.copy()
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.52 * ss
+    thickness = _scaled(1, ss)
+    for label, origin, projected, color in labels:
+        direction = np.asarray(projected) - np.asarray(origin)
+        direction /= max(1e-6, float(np.linalg.norm(direction)))
+        normal = np.asarray([-direction[1], direction[0]])
+        position = np.rint(
+            projected + direction * _scaled(7, ss) + normal * _scaled(2, ss)
+        ).astype(int)
+        size, baseline = cv2.getTextSize(label, font, font_scale, thickness)
+        x = max(1, min(width - size[0] - 2, int(position[0])))
+        y = max(size[1] + 1, min(height - baseline - 2, int(position[1])))
+        cv2.putText(layer, label, (x, y), font, font_scale,
+                    OUTLINE, thickness + _scaled(2, ss), cv2.LINE_AA)
+        cv2.putText(layer, label, (x, y), font, font_scale,
+                    color, thickness, cv2.LINE_AA)
+    cv2.addWeighted(
+        layer, AXIS_LABEL_ALPHA, frame,
+        1.0 - AXIS_LABEL_ALPHA, 0.0, dst=frame)
+
+
 def _draw_trail(frame: np.ndarray, points: list, color, thickness: int,
                 dash: tuple[int, int] | None = None) -> None:
     """轨迹尾迹：越早的一段越淡（颜色直接向背景预混，无需逐笔 alpha 混合）。"""
@@ -308,18 +338,18 @@ def _items_for_payload(payload: dict, layout: str):
     gt, pred = payload.get("gt"), payload.get("pred")
     if layout == "side":
         if gt is None:
-            return [([{"d": pred, "dash": False, "tag": "Pred"}] if pred else [], "Pred"),
+            return [([{"d": pred, "dash": False, "tag": "PRED"}] if pred else [], "PRED"),
                     ([], "")]
         if pred is None:
             return [([{"d": gt, "dash": False, "tag": "GT"}], "GT"), ([], "")]
         return [([{"d": gt, "dash": False, "tag": "GT"}], "GT"),
-                ([{"d": pred, "dash": False, "tag": "Pred"}], "Pred")]
+                ([{"d": pred, "dash": False, "tag": "PRED"}], "PRED")]
     if gt is None:
-        return [([{"d": pred, "dash": False, "tag": "Pred"}] if pred else [], "Pred")]
+        return [([{"d": pred, "dash": False, "tag": "PRED"}] if pred else [], "PRED")]
     if pred is None:
         return [([{"d": gt, "dash": False, "tag": "GT"}], "GT")]
     return [([{"d": gt, "dash": False, "tag": "GT"},
-              {"d": pred, "dash": True, "tag": "Pred"}], "GT solid / Pred dashed")]
+              {"d": pred, "dash": True, "tag": "PRED"}], "GT solid / PRED dashed")]
 
 
 def _extent(items: list[dict], coordinates: dict[int, _Coordinates]):
@@ -393,16 +423,17 @@ def _flatten(point: np.ndarray, plane: dict) -> np.ndarray:
 
 
 def _draw_arrow(frame: np.ndarray, start, end, color, thickness: int,
-                dash: tuple[int, int] | None = None) -> None:
+                dash: tuple[int, int] | None = None,
+                outline_color=OUTLINE) -> None:
     start_i = tuple(np.rint(start).astype(int))
     end_i = tuple(np.rint(end).astype(int))
     if not dash:
-        cv2.arrowedLine(frame, start_i, end_i, OUTLINE, thickness + 4, cv2.LINE_AA,
+        cv2.arrowedLine(frame, start_i, end_i, outline_color, thickness + 4, cv2.LINE_AA,
                         tipLength=0.18)
         cv2.arrowedLine(frame, start_i, end_i, color, thickness, cv2.LINE_AA,
                         tipLength=0.18)
         return
-    _draw_segment(frame, start, end, OUTLINE, thickness + 3, dash)
+    _draw_segment(frame, start, end, outline_color, thickness + 3, dash)
     _draw_segment(frame, start, end, color, thickness, dash)
     delta = np.asarray(end, dtype=np.float64) - np.asarray(start, dtype=np.float64)
     length = float(np.linalg.norm(delta))
@@ -419,7 +450,7 @@ def _draw_arrow(frame: np.ndarray, start, end, color, thickness: int,
     color_triangle = np.rint([
         end, base + normal * half_width, base - normal * half_width,
     ]).astype(np.int32)
-    cv2.fillConvexPoly(frame, outline_triangle, OUTLINE, cv2.LINE_AA)
+    cv2.fillConvexPoly(frame, outline_triangle, outline_color, cv2.LINE_AA)
     cv2.fillConvexPoly(frame, color_triangle, color, cv2.LINE_AA)
 
 
@@ -585,17 +616,23 @@ def _draw_scene(frame: np.ndarray, items: list[dict], view: dict,
         _draw_ground(frame, prepared, ss)
         origin = project(np.zeros(3))
         axis_length = radius * 0.6
+        axis_layer = frame.copy()
+        axis_labels = []
         for label, endpoint, color in zip(
                 ("X", "Y", "Z"), np.eye(3) * axis_length, AXIS_COLORS):
             projected = project(endpoint)
-            _draw_segment(frame, origin, projected, OUTLINE, _scaled(3.0, ss))
-            _draw_segment(frame, origin, projected, color, _scaled(1.35, ss))
-            cv2.putText(frame, label,
-                        tuple(np.rint(projected + (_scaled(4, ss), _scaled(4, ss))).astype(int)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.45 * ss, color,
-                        _scaled(1, ss), cv2.LINE_AA)
-        cv2.circle(frame, tuple(np.rint(origin).astype(int)), _scaled(3, ss),
+            cv2.arrowedLine(
+                axis_layer,
+                tuple(np.rint(origin).astype(int)),
+                tuple(np.rint(projected).astype(int)),
+                color, _scaled(1.5, ss), cv2.LINE_AA, tipLength=0.14)
+            axis_labels.append((f"+{label}", origin, projected, color))
+        cv2.circle(axis_layer, tuple(np.rint(origin).astype(int)), _scaled(2.5, ss),
                    TEXT, -1, cv2.LINE_AA)
+        cv2.addWeighted(
+            axis_layer, AXIS_ALPHA, frame, 1.0 - AXIS_ALPHA, 0.0, dst=frame)
+
+        prepared["axis_labels"] = axis_labels
 
     # 逐帧落影统一画在一张副本上，最后一次性混合：既保留网格透过阴影的层次，也只付一次混合开销。
     shadow_layer = None if static_only else frame.copy()
@@ -630,7 +667,7 @@ def _draw_scene(frame: np.ndarray, items: list[dict], view: dict,
             cv2.circle(frame, tuple(np.rint(project(camera_position)).astype(int)),
                        _scaled(3 if dashed else 4, ss), CAMERA, -1, cv2.LINE_AA)
             if show_cam_hand and camera_rotation is not None:
-                camera_overlays.append((camera_position, camera_rotation, item.get("tag") == "Pred"))
+                camera_overlays.append((camera_position, camera_rotation, item.get("tag") == "PRED"))
 
         joints_by_hand = payload.get("joints") or [[], []]
         trajectories = payload.get("traj") or {}
@@ -689,7 +726,7 @@ def _draw_scene(frame: np.ndarray, items: list[dict], view: dict,
 
     if static_only:
         if draw_static:
-            _draw_hud(frame, caption, plane, ss, prepared["coord_mode"])
+            _draw_hud(frame, caption, plane, ss)
             _draw_scale_bar(frame, scale, ss)
         return
 
@@ -702,47 +739,47 @@ def _draw_scene(frame: np.ndarray, items: list[dict], view: dict,
         lengths = (max(7.0, min(radius * 0.22, 22.0)),
                    max(7.0, min(radius * 0.22, 22.0)),
                    max(12.0, min(radius * 0.50, 48.0)))
-        # 三轴只给视线轴标注（并注明 GT/Pred）：GT+Pred 各三条标签会把画面中心糊成一团。
-        labels = (None, None, "Pred view" if predicted else "GT view")
-        camera_dash = (_scaled(6, ss), _scaled(4, ss))
+        # 三轴只给视线轴标注（并注明 GT/PRED）：GT+PRED 各三条标签会把画面中心糊成一团。
+        labels = (None, None, "PRED view" if predicted else "GT view")
+        camera_dash = None
+        faded_outline = _mix(OUTLINE, BG_MIX, 0.34)
         for direction, length, color, label in zip(directions, lengths, pose_colors, labels):
             endpoint = project(position + direction * length)
-            _draw_arrow(frame, center_px, endpoint, color,
-                        _scaled(3.2 if label else 2.4, ss), camera_dash)
+            faded_color = _mix(color, BG_MIX, 0.58)
+            _draw_arrow(frame, center_px, endpoint, faded_color,
+                        _scaled(3.2 if label else 2.4, ss), camera_dash,
+                        outline_color=faded_outline)
             if label:
                 _put_label(frame, label, endpoint + (_scaled(4, ss), -_scaled(4, ss)),
-                           color, 0.36, ss)
+                           faded_color, 0.36, ss)
         marker_size = max(2, int(round((16 if predicted else 12) * view["zoom"] * ss)))
         x0, y0 = np.rint(center_px - marker_size * 0.5).astype(int)
         x1, y1 = x0 + marker_size, y0 + marker_size
         marker_color = _bgr("#ff6b6b") if predicted else _bgr("#51cf66")
-        _draw_dashed_rect(frame, (x0, y0), (x1, y1), OUTLINE,
-                          _scaled(2.6, ss), camera_dash)
-        _draw_dashed_rect(frame, (x0, y0), (x1, y1), marker_color,
-                          _scaled(1.2, ss), camera_dash)
+        cv2.rectangle(frame, (x0, y0), (x1, y1), faded_outline,
+                      _scaled(2.6, ss), cv2.LINE_AA)
+        cv2.rectangle(frame, (x0, y0), (x1, y1),
+                      _mix(marker_color, BG_MIX, 0.55),
+                      _scaled(1.2, ss), cv2.LINE_AA)
 
-    _chip(frame, [(f"frame {frame_index} / {total_frames - 1}", TEXT, 0.4)],
-          (_scaled(10, ss), height - _scaled(10, ss)), ss, align="bl")
+    _draw_axis_labels(frame, prepared.get("axis_labels") or [], ss)
     if draw_static:
-        _draw_hud(frame, caption, plane, ss, prepared["coord_mode"])
+        _draw_hud(frame, caption, plane, ss)
         _draw_scale_bar(frame, scale, ss)
 
 
-def _draw_hud(frame: np.ndarray, caption: str, plane: dict, ss: float,
-              coord_mode: str) -> None:
-    """左上标题卡 + 图例卡（英文：cv2 Hershey 字体无中文，网页端保留中文）。"""
+def _draw_hud(frame: np.ndarray, caption: str, plane: dict, ss: float) -> None:
+    """Keep exported 3D HUD limited to source identity and scale."""
     step = plane["step"]
     grid = f"grid {step / 100:g} m" if step >= 100 else f"grid {step:g} cm"
-    title = caption if caption else "FIXED WORLD"
-    frame_name = "FIXED WORLD Z-UP" if coord_mode == "z_up" else "FIXED WORLD OPENCV"
-    _chip(frame, [(f"{frame_name}  /  first camera = origin", TEXT, 0.46),
-                  (f"{title}  |  cm  |  {grid}", MUTED, 0.36)],
+    title = str(caption or "").strip()
+    if "GT" in title and "PRED" in title:
+        title = "GT / PRED"
+    else:
+        title = title.upper()
+    prefix = f"{title}  |  " if title else ""
+    _chip(frame, [(f"{prefix}cm  |  {grid}", TEXT, 0.42)],
           (_scaled(12, ss), _scaled(12, ss)), ss, align="tl")
-    _chip(frame, [("left hand", LEFT, 0.36),
-                  ("right hand", RIGHT, 0.36),
-                  ("camera", CAMERA, 0.36)],
-          (_scaled(12, ss), frame.shape[0] - _scaled(46, ss)), ss,
-          align="bl", swatch=True)
 
 
 def _prepare_render(payload: dict, *, layout: str, views: dict | None,

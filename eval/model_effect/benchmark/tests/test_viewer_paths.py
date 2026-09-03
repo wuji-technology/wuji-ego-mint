@@ -12,7 +12,11 @@ if str(MODEL_EFFECT) not in sys.path:
 from visualization.reproj_core import mano  # noqa: E402
 from visualization.viewer import ckpts  # noqa: E402
 from visualization.viewer import store as viewer_store  # noqa: E402
-from visualization.viewer.const import DEFAULT_CONFIG, DEFAULT_HAND_MODE  # noqa: E402
+from visualization.viewer.const import (  # noqa: E402
+    DEFAULT_CONFIG,
+    DEFAULT_HAND_MODE,
+    DEFAULT_UKF_PARAMS,
+)
 
 
 def test_viewer_finds_repo_mano_assets():
@@ -27,6 +31,18 @@ def test_viewer_finds_repo_mano_assets():
 
 def test_viewer_defaults_to_ukf_smoothing():
     assert DEFAULT_HAND_MODE == "smooth"
+    assert DEFAULT_UKF_PARAMS == {"q": 0.7, "r": 0.5, "beta": 0.3}
+
+
+def test_viewer_normalizes_parameterized_ukf_mode():
+    pytest.importorskip("flask")
+    from visualization.viewer.routes import _normalize_hand_mode
+
+    assert _normalize_hand_mode("hard") == "hard"
+    assert _normalize_hand_mode("smooth") == "smooth@0.6,0.6,2"
+    assert _normalize_hand_mode("smooth@0.7000,0.500,1.600") == "smooth@0.7,0.5,1.6"
+    with pytest.raises(ValueError):
+        _normalize_hand_mode("smooth@0.7,9,1.6")
 
 
 def test_viewer_defaults_to_stage2_checkpoint_config():

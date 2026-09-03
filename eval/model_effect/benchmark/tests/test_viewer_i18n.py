@@ -34,6 +34,17 @@ def test_viewer_i18n_covers_dynamic_canvas_and_dialog_text():
     assert re.search(r"language\s*=\s*readInitialLanguage\(\)", source)
 
 
+def test_viewer_exposes_tunable_ukf_parameters_and_guidance():
+    html = (WEB_DIR / "index.html").read_text(encoding="utf-8")
+    source = (WEB_DIR / "app.js").read_text(encoding="utf-8")
+
+    for field in ("ukfQ", "ukfR", "ukfBeta"):
+        assert f'id="{field}"' in html
+    assert "q ↑ 更跟手，r/beta ↑ 更平滑" in html
+    assert "function effectiveHandMode()" in source
+    assert "smooth@${fmt(state.ukf.q)}" in source
+
+
 def test_viewer_serves_i18n_script():
     pytest.importorskip("flask")
     from visualization.viewer.routes import create_app

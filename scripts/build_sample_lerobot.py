@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the two-clip Hot3D LeRobot v3 sample shipped with MINT."""
+"""Build the eight-candidate Hot3D LeRobot v3 sample shipped with MINT."""
 
 from __future__ import annotations
 
@@ -16,7 +16,8 @@ import pyarrow.parquet as pq
 
 
 VIDEO_KEY = "observation.images.ego"
-SOURCE_DATASET_INDICES = (44, 45)
+# Keep earlier candidates first, followed by contrasting review candidates.
+SOURCE_DATASET_INDICES = (44, 45, 29, 14, 58, 49, 60, 83)
 CLIP_DURATION_SECONDS = 15.0
 TARGET_WIDTH = 512
 TARGET_HEIGHT = 512

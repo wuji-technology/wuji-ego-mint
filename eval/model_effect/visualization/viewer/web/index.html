@@ -67,8 +67,16 @@
       </select></div>
       <div class="field stacked"><label>手部拼窗</label><span class="seg" id="handModeSeg"
         title="切换只更新设置，不会自动推理；点击开始推理后生效">
-        <button data-hand-mode="hard">原始硬切</button><button data-hand-mode="blend">线性融合</button><button data-hand-mode="smooth" class="on" title="线性融合后，使用 ray_pipeline 数据清理链的相机系 UKF+RTS 双向平滑">融合 + UKF平滑</button>
+        <button data-hand-mode="hard">原始硬切</button><button data-hand-mode="blend">线性融合</button><button data-hand-mode="smooth" class="on" title="线性融合后，使用 ego_pipeline 数据清理链的相机系 UKF+RTS 双向平滑">融合 + UKF平滑</button>
       </span></div>
+      <div id="ukfControls" class="ukf-controls">
+        <div class="ukf-inputs">
+          <label title="过程噪声；越大越允许快速运动，平滑越弱"><span>q</span><input id="ukfQ" type="number" min="0.1" max="2" step="0.05" value="0.7"></label>
+          <label title="观测噪声；越大越不跟随逐帧预测，平滑越强"><span>r</span><input id="ukfR" type="number" min="0.1" max="2" step="0.05" value="0.5"></label>
+          <label title="快速运动的自适应平滑；越大越抑制快速运动抖动"><span>beta</span><input id="ukfBeta" type="number" min="0" max="5" step="0.1" value="0.3"></label>
+        </div>
+        <small><b>默认：较轻平滑</b> · 建议 q 0.4–1.0、r 0.3–1.0、beta 0.2–3.0；q ↑ 更跟手，r/beta ↑ 更平滑。安全范围 q/r 0.1–2.0、beta 0–5。</small>
+      </div>
     </section>
 
     <section class="control-card geometry-card">
@@ -118,14 +126,15 @@
       <span id="exportPicker" class="export-picker">
         <button id="exportBtn" class="export-action" type="button" aria-expanded="false"
                 aria-haspopup="true" aria-controls="exportSourcesMenu"
-                title="导出所选画面；MuJoCo 与 Retargeting 需先手动开启面板才会渲染">导出选中 2 路</button>
+                title="默认选择四类画面；有 GT 时展开为两排八格，单格跟随原视频尺寸">导出选中 4 路</button>
         <span id="exportSourcesMenu" class="export-sources-menu" role="group" aria-label="导出范围" hidden>
           <span class="export-sources-title">导出范围 · 选择画面</span>
           <label><input type="checkbox" data-export-source="both_2d" checked>原视频渲染</label>
           <label><input type="checkbox" data-export-source="world_motion_3d" checked>固定世界 · 3D（跟随视频）</label>
-          <label><input type="checkbox" data-export-source="mujoco_3d">MuJoCo · 仿真</label>
-          <label><input type="checkbox" data-export-source="wuji_retarget_3d">Wuji Hand · Retargeting</label>
-          <span class="export-sources-hint">MuJoCo / Retargeting 先手动开启才会渲染；导出可复用已完成缓存</span>
+          <label><input type="checkbox" data-export-source="mujoco_3d" checked>MuJoCo · 仿真</label>
+          <label><input type="checkbox" data-export-source="wuji_retarget_3d" checked>Wuji Hand · Retargeting</label>
+          <span class="export-sources-hint">有 GT 时两排八格：2D、3D、MuJoCo、Wuji 均为 GT/PRED</span>
+          <button id="exportSeparateBtn" type="button">下载 GT/PRED 独立视频（ZIP）</button>
         </span>
       </span>
       <span id="exportProgress" class="export-progress" role="progressbar" aria-label="导出进度"

@@ -17,12 +17,24 @@ from flask import Flask, abort, jsonify, request, send_file
 
 from . import ckpts, diversity_analysis
 from .const import (CAM_MODES, CONTENTS, DEFAULT_CAM_MODE, DEFAULT_HAND_MODE,
-                    DEFAULT_PARAM_MODE, HAND_MODES, LAYOUTS, MODEL_TRAIN_ROOT,
-                    MODES, PARAM_MODES, VIDEO_EXTS)
+                    DEFAULT_LAYOUT, DEFAULT_PARAM_MODE, DEFAULT_UKF_PARAMS,
+                    HAND_MODES, LAYOUTS, MODEL_TRAIN_ROOT, MODES, PARAM_MODES,
+                    VIDEO_EXTS)
 from .dataset_analysis import DatasetAnalysisManager
 
 WEB_DIR = Path(__file__).resolve().parent / "web"
 WORLD_COORD_MODES = {"z_up", "opencv"}
+
+
+def _normalize_hand_mode(value: str) -> str:
+    """Validate base or parameterized smooth mode and return a stable cache key."""
+    from inference.hand_smoothing import (
+        encode_hand_smoothing_mode,
+        parse_hand_smoothing_mode,
+    )
+
+    base, params = parse_hand_smoothing_mode(value)
+    return encode_hand_smoothing_mode(params) if params is not None else base
 
 
 def _is_lerobot_dir(path: Path) -> bool:
@@ -316,15 +328,16 @@ def create_app(store) -> Flask:
                 return jsonify(ok=False, error="批量模型 Run/Step 无效或 checkpoint 不存在"), 400
         mode = body.get("mode") or store.default_mode
         cam_mode = body.get("cam_mode") or DEFAULT_CAM_MODE
-        hand_mode = body.get("hand_mode") or DEFAULT_HAND_MODE
+        try:
+            hand_mode = _normalize_hand_mode(body.get("hand_mode") or DEFAULT_HAND_MODE)
+        except (TypeError, ValueError) as exc:
+            return jsonify(ok=False, error=str(exc)), 400
         pred_betas = body.get("pred_betas") or DEFAULT_PARAM_MODE
         pred_fov = body.get("pred_fov") or DEFAULT_PARAM_MODE
         if mode not in MODES:
             return jsonify(ok=False, error=f"未知渲染模式: {mode}"), 400
         if cam_mode not in CAM_MODES:
             return jsonify(ok=False, error=f"未知相机推理模式: {cam_mode}"), 400
-        if hand_mode not in HAND_MODES:
-            return jsonify(ok=False, error=f"未知手部拼窗模式: {hand_mode}"), 400
         if pred_betas not in PARAM_MODES or pred_fov not in PARAM_MODES:
             return jsonify(ok=False, error="预测手形/内参模式无效"), 400
         res = store.start_batch_inference(
@@ -569,13 +582,14 @@ def create_app(store) -> Flask:
         return jsonify(fps=(store.item_fps(eid) if reg else store.default_fps),
                        no_truth=(store.is_no_truth(eid) if reg else False),
                        modes=MODES, default_mode=store.default_mode,
-                       layouts=LAYOUTS, default_layout=LAYOUTS[0],
+                       layouts=LAYOUTS, default_layout=DEFAULT_LAYOUT,
                        contents=CONTENTS, default_content=CONTENTS[0],
                        cam_modes=CAM_MODES, default_cam_mode=DEFAULT_CAM_MODE,
                        full_max_frames=getattr(
                            store, "predictor_full_max_frames", lambda: None
                        )(),
                        hand_modes=HAND_MODES, default_hand_mode=DEFAULT_HAND_MODE,
+                       default_ukf_params=DEFAULT_UKF_PARAMS,
                        param_modes=PARAM_MODES, default_param_mode=DEFAULT_PARAM_MODE)
 
     @app.get("/api/world/<int:eid>")
@@ -586,9 +600,11 @@ def create_app(store) -> Flask:
         cam_mode = request.args.get("cam_mode", DEFAULT_CAM_MODE)
         if cam_mode not in CAM_MODES:
             cam_mode = DEFAULT_CAM_MODE
-        hand_mode = request.args.get("hand_mode", DEFAULT_HAND_MODE)
-        if hand_mode not in HAND_MODES:
-            hand_mode = DEFAULT_HAND_MODE
+        try:
+            hand_mode = _normalize_hand_mode(
+                request.args.get("hand_mode", DEFAULT_HAND_MODE))
+        except (TypeError, ValueError) as exc:
+            abort(400, str(exc))
         gtb = request.args.get("gt_betas", DEFAULT_PARAM_MODE) == "mean"
         pdb = request.args.get("pred_betas", DEFAULT_PARAM_MODE) == "mean"
         pdf = request.args.get("pred_fov", DEFAULT_PARAM_MODE) == "mean"
@@ -639,15 +655,17 @@ def create_app(store) -> Flask:
     def api_progress2d(eid: int):
         # 前端按块轮询 2D 渲染进度：参数与 /video 一致（mode/layout/content/raw），后端按同一归一化取键。
         mode = request.args.get("mode", store.default_mode)
-        layout = request.args.get("layout", LAYOUTS[0])
+        layout = request.args.get("layout", DEFAULT_LAYOUT)
         content = request.args.get("content", CONTENTS[0])
         raw = bool(request.args.get("raw"))
         cam_mode = request.args.get("cam_mode", DEFAULT_CAM_MODE)
         if cam_mode not in CAM_MODES:
             cam_mode = DEFAULT_CAM_MODE
-        hand_mode = request.args.get("hand_mode", DEFAULT_HAND_MODE)
-        if hand_mode not in HAND_MODES:
-            hand_mode = DEFAULT_HAND_MODE
+        try:
+            hand_mode = _normalize_hand_mode(
+                request.args.get("hand_mode", DEFAULT_HAND_MODE))
+        except (TypeError, ValueError) as exc:
+            abort(400, str(exc))
         pkey = (f"{int(request.args.get('gt_betas')=='mean')}"
                 f"{int(request.args.get('pred_betas')=='mean')}"
                 f"{int(request.args.get('pred_fov')=='mean')}")
@@ -665,10 +683,14 @@ def create_app(store) -> Flask:
             abort(404, "episode 越界")
         source = request.args.get("source", "pred")
         cam_mode = request.args.get("cam_mode", DEFAULT_CAM_MODE)
-        hand_mode = request.args.get("hand_mode", DEFAULT_HAND_MODE)
+        try:
+            hand_mode = _normalize_hand_mode(
+                request.args.get("hand_mode", DEFAULT_HAND_MODE))
+        except (TypeError, ValueError) as exc:
+            abort(400, str(exc))
         if source not in {"gt", "pred"}:
             abort(400, f"未知 source: {source}")
-        if cam_mode not in CAM_MODES or hand_mode not in HAND_MODES:
+        if cam_mode not in CAM_MODES:
             abort(400, "MuJoCo 推理参数无效")
         return jsonify(store.mujoco_progress(
             eid, source, cam_mode, hand_mode,
@@ -676,12 +698,16 @@ def create_app(store) -> Flask:
             request.args.get("fov", DEFAULT_PARAM_MODE) == "mean"))
 
     def _world_query_options() -> dict:
-        layout = request.args.get("layout", LAYOUTS[0])
+        layout = request.args.get("layout", DEFAULT_LAYOUT)
         coord_mode = request.args.get("coord_mode", "z_up")
         cam_mode = request.args.get("cam_mode", DEFAULT_CAM_MODE)
-        hand_mode = request.args.get("hand_mode", DEFAULT_HAND_MODE)
+        try:
+            hand_mode = _normalize_hand_mode(
+                request.args.get("hand_mode", DEFAULT_HAND_MODE))
+        except (TypeError, ValueError) as exc:
+            abort(400, str(exc))
         if (layout not in LAYOUTS or coord_mode not in WORLD_COORD_MODES
-                or cam_mode not in CAM_MODES or hand_mode not in HAND_MODES):
+                or cam_mode not in CAM_MODES):
             abort(400, "固定世界渲染参数无效")
         views = {}
         for view_name in ("vov", "vgt", "vpred"):
@@ -730,10 +756,14 @@ def create_app(store) -> Flask:
             abort(404, "episode 越界")
         source = request.args.get("source", "pred")
         cam_mode = request.args.get("cam_mode", DEFAULT_CAM_MODE)
-        hand_mode = request.args.get("hand_mode", DEFAULT_HAND_MODE)
+        try:
+            hand_mode = _normalize_hand_mode(
+                request.args.get("hand_mode", DEFAULT_HAND_MODE))
+        except (TypeError, ValueError) as exc:
+            abort(404, str(exc))
         if source not in {"gt", "pred"}:
             abort(404, f"未知 source: {source}")
-        if cam_mode not in CAM_MODES or hand_mode not in HAND_MODES:
+        if cam_mode not in CAM_MODES:
             abort(404, "MuJoCo 推理参数无效")
         try:
             path = store.mujoco_video(
@@ -752,10 +782,14 @@ def create_app(store) -> Flask:
             abort(404, "episode 越界")
         source = request.args.get("source", "pred")
         cam_mode = request.args.get("cam_mode", DEFAULT_CAM_MODE)
-        hand_mode = request.args.get("hand_mode", DEFAULT_HAND_MODE)
+        try:
+            hand_mode = _normalize_hand_mode(
+                request.args.get("hand_mode", DEFAULT_HAND_MODE))
+        except (TypeError, ValueError) as exc:
+            abort(400, str(exc))
         if source not in {"gt", "pred"}:
             abort(400, f"未知 source: {source}")
-        if cam_mode not in CAM_MODES or hand_mode not in HAND_MODES:
+        if cam_mode not in CAM_MODES:
             abort(400, "Wuji retargeting 推理参数无效")
         return jsonify(store.retarget_progress(
             eid, source, cam_mode, hand_mode,
@@ -768,10 +802,14 @@ def create_app(store) -> Flask:
             abort(404, "episode 越界")
         source = request.args.get("source", "pred")
         cam_mode = request.args.get("cam_mode", DEFAULT_CAM_MODE)
-        hand_mode = request.args.get("hand_mode", DEFAULT_HAND_MODE)
+        try:
+            hand_mode = _normalize_hand_mode(
+                request.args.get("hand_mode", DEFAULT_HAND_MODE))
+        except (TypeError, ValueError) as exc:
+            abort(404, str(exc))
         if source not in {"gt", "pred"}:
             abort(404, f"未知 source: {source}")
-        if cam_mode not in CAM_MODES or hand_mode not in HAND_MODES:
+        if cam_mode not in CAM_MODES:
             abort(404, "Wuji retargeting 推理参数无效")
         try:
             path = store.retarget_video(
@@ -794,13 +832,17 @@ def create_app(store) -> Flask:
                 isinstance(source, str) for source in sources):
             abort(400, "至少选择一路导出画面")
         mode = body.get("mode", store.default_mode)
-        layout = body.get("layout", LAYOUTS[0])
+        layout = body.get("layout", DEFAULT_LAYOUT)
         content = body.get("content", CONTENTS[0])
         cam_mode = body.get("cam_mode", DEFAULT_CAM_MODE)
-        hand_mode = body.get("hand_mode", DEFAULT_HAND_MODE)
+        try:
+            hand_mode = _normalize_hand_mode(
+                body.get("hand_mode", DEFAULT_HAND_MODE))
+        except (TypeError, ValueError) as exc:
+            abort(400, str(exc))
         if mode not in MODES or layout not in LAYOUTS or content not in CONTENTS:
             abort(400, "导出渲染参数无效")
-        if cam_mode not in CAM_MODES or hand_mode not in HAND_MODES:
+        if cam_mode not in CAM_MODES:
             abort(400, "导出推理参数无效")
         world_views = body.get("world_views")
         if world_views is not None and not isinstance(world_views, dict):
@@ -812,8 +854,12 @@ def create_app(store) -> Flask:
         show_cam_hand = body.get("show_cam_hand", True)
         if not isinstance(show_traj, bool) or not isinstance(show_cam_hand, bool):
             abort(400, "固定世界显示参数无效")
+        output_format = body.get("output_format", "grid")
+        if output_format not in {"grid", "separate"}:
+            abort(400, "导出文件格式无效")
         source_tag = "_".join(str(source) for source in dict.fromkeys(sources))
-        filename = f"wuji_{source_tag}.mp4"
+        filename = (f"wuji_item_{eid:03d}_individual_videos.zip"
+                    if output_format == "separate" else f"wuji_{source_tag}.mp4")
         token = uuid.uuid4().hex
         options = {
             "mode": mode,
@@ -829,6 +875,7 @@ def create_app(store) -> Flask:
             "show_traj": show_traj,
             "show_cam_hand": show_cam_hand,
             "raw": bool(body.get("raw")),
+            "output_format": output_format,
         }
         with export_lock:
             export_jobs[token] = {
@@ -894,8 +941,7 @@ def create_app(store) -> Flask:
             abort(404, "导出视频不存在或已过期")
         path, filename = exported
         return send_file(
-            path, mimetype="video/mp4", as_attachment=True,
-            download_name=filename, conditional=True)
+            path, as_attachment=True, download_name=filename, conditional=True)
 
     @app.get("/video/<int:eid>")
     def video(eid: int):
@@ -904,7 +950,7 @@ def create_app(store) -> Flask:
         mode = request.args.get("mode", store.default_mode)
         if mode not in MODES:
             abort(404, f"未知 mode: {mode}")
-        layout = request.args.get("layout", LAYOUTS[0])
+        layout = request.args.get("layout", DEFAULT_LAYOUT)
         if layout not in LAYOUTS:
             abort(404, f"未知 layout: {layout}")
         content = request.args.get("content", CONTENTS[0])
@@ -913,9 +959,11 @@ def create_app(store) -> Flask:
         cam_mode = request.args.get("cam_mode", DEFAULT_CAM_MODE)
         if cam_mode not in CAM_MODES:
             abort(404, f"未知 cam_mode: {cam_mode}")
-        hand_mode = request.args.get("hand_mode", DEFAULT_HAND_MODE)
-        if hand_mode not in HAND_MODES:
-            abort(404, f"未知 hand_mode: {hand_mode}")
+        try:
+            hand_mode = _normalize_hand_mode(
+                request.args.get("hand_mode", DEFAULT_HAND_MODE))
+        except (TypeError, ValueError) as exc:
+            abort(404, str(exc))
         gtb = request.args.get("gt_betas", DEFAULT_PARAM_MODE) == "mean"
         pdb = request.args.get("pred_betas", DEFAULT_PARAM_MODE) == "mean"
         pdf = request.args.get("pred_fov", DEFAULT_PARAM_MODE) == "mean"

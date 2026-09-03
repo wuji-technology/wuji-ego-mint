@@ -75,7 +75,7 @@ class HaWorWorker:
                 print(f'[pipeline]  {self._gpu}.'
                       f'{time.perf_counter()-t0:.2f}s)')
             else:
-                from ray_pipeline.backends.hawor_no_filler import load_hawor_model
+                from ego_pipeline.backends.hawor_no_filler import load_hawor_model
                 self._model = load_hawor_model(device=torch.device('cuda'),
                                                use_compile=self._use_compile)
 
@@ -229,7 +229,7 @@ class HaWorWorker:
     ) -> None:
         import concurrent.futures
         from steps.cpu.file_ops import copy_video_for_hawor
-        from ray_pipeline.backends.hawor_no_filler import (
+        from ego_pipeline.backends.hawor_no_filler import (
             run_stage1_detect, run_stage1_track, run_stage2_from_meta,
         )
         from steps.gpu.moge import run_moge_step

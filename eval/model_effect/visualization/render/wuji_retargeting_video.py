@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render 21-point hands as camera-aligned first-generation Wuji Hand video."""
+"""Render 21-point hands as a fixed third-person first-generation Wuji Hand video."""
 from __future__ import annotations
 
 import math
@@ -7,7 +7,6 @@ import os
 import sys
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
-from functools import lru_cache
 from pathlib import Path
 
 os.environ.setdefault("MUJOCO_GL", "egl")
@@ -27,10 +26,8 @@ _HAND_RGBA = {"left": (0.34, 0.73, 0.95, 1.0), "right": (1.0, 0.79, 0.40, 1.0)}
 # 视觉 geom 逐手一个 group：按 presence 开关 mjvOption.geomgroup，未检测的手不出现也不投影。
 _VISUAL_GROUP = {"left": 2, "right": 3}
 _FLOOR_GROUP = 1
-# 参考地面比最低手点再低这么多米。比 MuJoCo 面板的 0.85 m 近一些：ego 取景下 0.85 m 会把
-# 地面和接触阴影推到画面外，只剩大片天空；0.35 m 能让网格与阴影进画面，读得出手离地多高。
-_FLOOR_CLEARANCE = 0.35
-_FLOOR_HALF_RANGE = (4.0, 8.0)     # 同 MuJoCo 面板：至少 4 m、按相机距离扩到 8 m
+# 与 MuJoCo 面板共用较近参考地面，突出手部操作而不是空旷的离地空间。
+_FLOOR_CLEARANCE = 0.08
 _TEXT = (245, 246, 248)
 _MUTED = (176, 186, 196)
 _CARD = (14, 11, 8)
@@ -96,28 +93,42 @@ def _merged_hand_xml(body: Path, width: int, height: int) -> str:
     # 观感取值对齐 render/mujoco_scene.py 的 MuJoCo 面板：浅灰渐变天空 + checker 网格地面 +
     # 压低环境光的方向主光（ambient 太高会把接触阴影冲掉）。地面用薄 box 而非 plane：
     # 方向光在大 plane 上掠射会出 shadow acne，薄 box 的有限边界让阴影视锥贴合场景。
+    from .mujoco_scene import (
+        ROBOT_GROUND_RGB1, ROBOT_GROUND_RGB2, ROBOT_GROUND_TEXREPEAT,
+        ROBOT_HAND_SHININESS, ROBOT_HAND_SPECULAR,
+        ROBOT_HEADLIGHT_AMBIENT, ROBOT_HEADLIGHT_DIFFUSE,
+        ROBOT_HEADLIGHT_SPECULAR, ROBOT_KEY_DIFFUSE, ROBOT_KEY_SPECULAR,
+        ROBOT_SHADOWCLIP, ROBOT_SHADOWSCALE, ROBOT_ZFAR, ROBOT_ZNEAR,
+    )
+    rgb1 = " ".join(f"{value:.2f}" for value in ROBOT_GROUND_RGB1)
+    rgb2 = " ".join(f"{value:.2f}" for value in ROBOT_GROUND_RGB2)
+    ambient = " ".join(f"{value:.2f}" for value in ROBOT_HEADLIGHT_AMBIENT)
+    diffuse = " ".join(f"{value:.2f}" for value in ROBOT_HEADLIGHT_DIFFUSE)
+    specular = " ".join(f"{value:.2f}" for value in ROBOT_HEADLIGHT_SPECULAR)
+    key_diffuse = " ".join(f"{value:.2f}" for value in ROBOT_KEY_DIFFUSE)
+    key_specular = " ".join(f"{value:.2f}" for value in ROBOT_KEY_SPECULAR)
     return f"""<mujoco model="wuji-hand-scene">
   <compiler angle="radian"/>
   <visual>
     <global offwidth="{int(width)}" offheight="{int(height)}"/>
-    <quality shadowsize="8192" offsamples="8"/>
-    <headlight ambient="0.34 0.34 0.36" diffuse="0.12 0.12 0.12" specular="0.06 0.06 0.06"/>
-    <map shadowclip="1.2" shadowscale="1.0" znear="0.0015" zfar="24"/>
+    <quality shadowsize="4096" offsamples="2"/>
+    <headlight ambient="{ambient}" diffuse="{diffuse}" specular="{specular}"/>
+    <map shadowclip="{ROBOT_SHADOWCLIP}" shadowscale="{ROBOT_SHADOWSCALE}" znear="{ROBOT_ZNEAR}" zfar="{ROBOT_ZFAR}"/>
   </visual>
   <asset>
     <texture type="skybox" builtin="gradient" rgb1="0.95 0.96 0.98" rgb2="0.78 0.82 0.88"
              width="512" height="512"/>
-    <texture name="ground_grid" type="2d" builtin="checker" rgb1="0.30 0.35 0.35"
-             rgb2="0.46 0.51 0.50" width="512" height="512"/>
-    <material name="ground" texture="ground_grid" texrepeat="12 12" texuniform="true"
+    <texture name="ground_grid" type="2d" builtin="checker" rgb1="{rgb1}"
+             rgb2="{rgb2}" width="512" height="512"/>
+    <material name="ground" texture="ground_grid" texrepeat="{ROBOT_GROUND_TEXREPEAT} {ROBOT_GROUND_TEXREPEAT}" texuniform="true"
               rgba="1 1 1 1" reflectance="0.0" specular="0.0" shininess="0.0"/>
-    <material name="m_left" rgba="{_rgba(_HAND_RGBA['left'])}" specular="0.35" shininess="0.4"/>
-    <material name="m_right" rgba="{_rgba(_HAND_RGBA['right'])}" specular="0.35" shininess="0.4"/>
+    <material name="m_left" rgba="{_rgba(_HAND_RGBA['left'])}" specular="{ROBOT_HAND_SPECULAR}" shininess="{ROBOT_HAND_SHININESS}"/>
+    <material name="m_right" rgba="{_rgba(_HAND_RGBA['right'])}" specular="{ROBOT_HAND_SPECULAR}" shininess="{ROBOT_HAND_SHININESS}"/>
     {''.join(assets)}
   </asset>
   <worldbody>
     <light name="key" pos="0 0 2" dir="0 0 -1" directional="true" castshadow="true"
-           diffuse="0.85 0.85 0.85" specular="0.15 0.15 0.15"/>
+           diffuse="{key_diffuse}" specular="{key_specular}"/>
     <body name="floorb" pos="0 0 0">
       <geom name="floor" type="box" size="3 3 0.02" material="ground"
             group="{_FLOOR_GROUP}" contype="0" conaffinity="0"/>
@@ -216,13 +227,17 @@ def _floor_pose(up: np.ndarray, hand_points: np.ndarray,
     返回 (中心, 四元数 wxyz 把 box 的 +Z 对到 up, 半边长)；纯 numpy，便于单测。
     """
     up = np.asarray(up, dtype=np.float64)
-    points = np.concatenate([hand_points, camera_points], axis=0)
-    level = float((np.asarray(hand_points) @ up).min()) - _FLOOR_CLEARANCE
-    center = points.mean(axis=0)
+    hands = np.asarray(hand_points, dtype=np.float64).reshape(-1, 3)
+    cameras = np.asarray(camera_points, dtype=np.float64).reshape(-1, 3)
+    points = np.concatenate([hands, cameras], axis=0)
+    level = float(np.percentile(hands @ up, 0.1)) - _FLOOR_CLEARANCE
+    center = hands.mean(axis=0)
     center = center + up * (level - float(center @ up))
-    offsets = points - center
-    span = float(np.linalg.norm(offsets - np.outer(offsets @ up, up), axis=1).max())
-    half = float(np.clip(span * 1.5 + 1.2, *_FLOOR_HALF_RANGE))
+    # Size is based on the same hand + camera envelope as MuJoCo; the center
+    # and contact height are based on hands so the ground does not drift with
+    # the camera path.
+    from .mujoco_scene import robot_ground_half_extent
+    half = robot_ground_half_extent(points, up=up)
 
     axis = np.cross(np.asarray([0.0, 0.0, 1.0]), up)
     norm = float(np.linalg.norm(axis))
@@ -234,19 +249,6 @@ def _floor_pose(up: np.ndarray, hand_points: np.ndarray,
         quat = np.concatenate([[math.cos(angle / 2.0)],
                                axis / norm * math.sin(angle / 2.0)])
     return center, quat, half
-
-
-def _light_pose(up: np.ndarray, hand_points: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """主光：沿重力斜射（略带侧倾），接触阴影才有方向感而不是正上方的平光。"""
-    up = np.asarray(up, dtype=np.float64)
-    lateral = np.cross(up, np.asarray([1.0, 0.0, 0.0]))
-    if float(np.linalg.norm(lateral)) < 1e-6:
-        lateral = np.cross(up, np.asarray([0.0, 1.0, 0.0]))
-    lateral /= max(1e-9, float(np.linalg.norm(lateral)))
-    direction = -up + 0.35 * lateral + 0.2 * np.cross(up, lateral)
-    direction /= max(1e-9, float(np.linalg.norm(direction)))
-    position = np.asarray(hand_points).mean(axis=0) + up * 1.6 - lateral * 0.6
-    return position, direction
 
 
 class _WujiHandScene:
@@ -326,6 +328,12 @@ class _WujiHandScene:
                 "wrist_local": wrist_local,
             }
 
+        self.third_position = None
+        self.third_target = None
+        self.third_up = None
+        self.third_radius = 0.08
+        self.third_camera_frusta = ()
+
     def place_floor(self, up: np.ndarray, hand_points: np.ndarray,
                     camera_points: np.ndarray) -> None:
         """摆地面与主光；手和相机都不动，因此像素对齐与改造前完全一致。"""
@@ -338,9 +346,42 @@ class _WujiHandScene:
         size = np.asarray(self.model.geom_size[self.floor_geom]).copy()
         size[0] = size[1] = half
         self.model.geom_size[self.floor_geom] = size
-        position, direction = _light_pose(up, hand_points)
+        from .mujoco_scene import robot_key_light_pose
+        position, direction = robot_key_light_pose(up, hand_points)
         self.model.light_pos[self.light] = position
         self.model.light_dir[self.light] = direction
+
+    def fit_third_camera(self, up: np.ndarray, hand_points: np.ndarray,
+                         cameras: np.ndarray, image_size: tuple[int, int]) -> None:
+        """Use the exact camera pose shared with the MuJoCo MANO renderer."""
+        from .mujoco_scene import (
+            fixed_third_camera_pose,
+            prepare_fixed_camera_frusta,
+        )
+
+        result = fixed_third_camera_pose(
+            up, hand_points, cameras,
+            aspect=float(image_size[0]) / max(1.0, float(image_size[1])))
+        self.third_position, self.third_target, self.third_up, self.third_radius = result
+        self.third_camera_frusta = prepare_fixed_camera_frusta(
+            cameras, self.third_radius)
+
+    def _add_line(self, start: np.ndarray, end: np.ndarray,
+                  width: float, rgba) -> None:
+        scene = self.renderer.scene
+        if scene.ngeom >= scene.maxgeom:
+            return
+        geom = scene.geoms[scene.ngeom]
+        self.mujoco.mjv_initGeom(
+            geom, self.mujoco.mjtGeom.mjGEOM_LINE,
+            np.zeros(3), np.zeros(3), np.zeros(9),
+            np.asarray(rgba, dtype=np.float32),
+        )
+        self.mujoco.mjv_connector(
+            geom, self.mujoco.mjtGeom.mjGEOM_LINE, float(width),
+            np.asarray(start, dtype=np.float64), np.asarray(end, dtype=np.float64),
+        )
+        scene.ngeom += 1
 
     def solve_pose(self, side: str, joints: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """单手 retargeting，返回 MuJoCo qpos 与根节点位姿，不改共享场景。"""
@@ -382,22 +423,34 @@ class _WujiHandScene:
         _configure_ego_camera(self.renderer.scene, cam_c2w, intrinsics, image_size)
         return np.asarray(self.renderer.render())
 
+    def render_third(self, validity: dict[str, bool], current_frame: int,
+                     image_size: tuple[int, int]) -> np.ndarray:
+        from .mujoco_scene import (
+            FIXED_THIRD_FOVY,
+            configure_fixed_camera,
+            fixed_camera_frusta,
+        )
+
+        if self.third_position is None:
+            raise RuntimeError("Wuji Hand fixed third camera has not been fitted")
+        for side, group in _VISUAL_GROUP.items():
+            self.option.geomgroup[group] = 1 if validity.get(side) else 0
+        self.mujoco.mj_forward(self.model, self.data)
+        self.renderer.update_scene(self.data, scene_option=self.option)
+        configure_fixed_camera(
+            self.renderer.scene, self.third_position, self.third_target,
+            self.third_up, fovy=FIXED_THIRD_FOVY,
+            aspect=float(image_size[0]) / max(1.0, float(image_size[1])))
+        for start, end, width, rgba in fixed_camera_frusta(
+                self.third_camera_frusta, current_frame):
+            self._add_line(start, end, width, rgba)
+        return np.asarray(self.renderer.render())
+
     def reset(self, side: str) -> None:
         self.sides[side]["retargeter"].reset()
 
     def close(self) -> None:
         self.renderer.close()
-
-
-@lru_cache(maxsize=4)
-def _vignette(height: int, width: int) -> np.ndarray:
-    """轻暗角：亮天空背景下把注意力收到画面中间（乘性遮罩，缓存一次）。"""
-    xs = (np.arange(width, dtype=np.float32) - (width - 1) * 0.5) / max(1.0, width * 0.5)
-    ys = (np.arange(height, dtype=np.float32) - (height - 1) * 0.5) / max(1.0, height * 0.5)
-    radius = np.sqrt((xs[None, :] * 0.85) ** 2 + ys[:, None] ** 2)
-    mask = 1.0 - 0.34 * np.clip(radius / 1.15, 0.0, 1.0) ** 1.6
-    mask = np.rint(mask * 255.0).astype(np.uint8)
-    return np.repeat(mask[:, :, None], 3, axis=2)
 
 
 def _rounded_rect(image: np.ndarray, p0, p1, radius: int, color) -> None:
@@ -448,19 +501,20 @@ def _card(image: np.ndarray, rows, anchor, *, align: str = "tl",
     return (x0, y0), (x0 + width, y0 + height)
 
 
-def _decorate_frame(image: np.ndarray, validity: dict[str, bool]) -> np.ndarray:
-    """HUD：标题卡 + 左右手状态卡 + 相机说明（cv2 Hershey 无中文，一律 ASCII）。"""
+def _decorate_frame(image: np.ndarray, validity: dict[str, bool],
+                    label_text: str | None = None) -> np.ndarray:
+    """Draw the method/source title without duplicating 2D hand-presence HUD."""
     image = np.ascontiguousarray(image)
-    height, width = image.shape[:2]
-    cv2.multiply(image, _vignette(height, width), dst=image, scale=1.0 / 255.0)
-    _card(image, [("WUJI HAND  /  RETARGETING", _TEXT, 0.6, 2),
-                  ("first-generation 20-DoF hand  |  source camera", _MUTED, 0.38, 1)],
+    _height, width = image.shape[:2]
+    compact = width <= 640
+    title = ("WUJI RETARGET" if compact else "WUJI HAND  /  RETARGETING")
+    if label_text:
+        title += f"  /  {label_text}"
+    subtitle = ("fixed third-person" if compact
+                else "fixed third-person  |  start + live camera")
+    _card(image, [(title, _TEXT, 0.54 if compact else 0.6, 2),
+                  (subtitle, _MUTED, 0.36 if compact else 0.38, 1)],
           (16, 14), align="tl")
-    _card(image, [(f"L  {'LIVE' if validity.get('left') else 'MISS'}",
-                   _PANEL_COLORS["left"] if validity.get("left") else _MUTED, 0.5, 2),
-                  (f"R  {'LIVE' if validity.get('right') else 'MISS'}",
-                   _PANEL_COLORS["right"] if validity.get("right") else _MUTED, 0.5, 2)],
-          (width - 16, 14), align="tr", swatch=True)
     if not any(validity.values()):
         _card(image, [("HANDS NOT DETECTED", _TEXT, 0.62, 2)],
               (width // 2, height // 2), align="cc", alpha=0.7)
@@ -496,9 +550,10 @@ def render_wuji_hand_video(
     image_size: tuple[int, int],
     width: int = 960,
     height: int | None = None,
+    label_text: str | None = None,
     on_step=None,
 ) -> Path:
-    """Retarget OpenPose/MediaPipe-order model joints and render both robot hands."""
+    """Retarget model joints and render both hands from one fitted third-person view."""
     import queue
 
     from . import draw
@@ -524,6 +579,14 @@ def render_wuji_hand_video(
     if K.shape != (3, 3) or len(source_size) != 2 or min(source_size) <= 0:
         raise ValueError("Wuji retargeting camera intrinsics or source size is invalid")
 
+    # Match MuJoCo's upright/centered gauge before fitting the shared view and
+    # solving the hand, so camera-origin frusta land at identical pixels.
+    from .mujoco_scene import canonicalize_robot_coordinates
+    all_points = np.concatenate([joints["left"], joints["right"]], axis=0)
+    rotation, origin, cameras = canonicalize_robot_coordinates(cameras, all_points)
+    for side in ("left", "right"):
+        joints[side] = joints[side] @ rotation.T - origin
+
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     render_width = max(4, int(width))
@@ -547,6 +610,7 @@ def render_wuji_hand_video(
         if not len(hand_points) or not len(camera_points):
             raise ValueError("Wuji retargeting 没有可用的手部或相机位置")
         scene.place_floor(up, hand_points, camera_points)
+        scene.fit_third_camera(up, hand_points, cameras, (render_width, render_height))
 
         frame_validity = {
             side: validity[:, side_index] & np.all(np.isfinite(joints[side]), axis=(1, 2))
@@ -577,8 +641,10 @@ def render_wuji_hand_video(
                             f"expected {frame}, got {solved_frame}")
                     if solution is not None:
                         scene.apply_pose(side, solution)
-                image = scene.render(current_validity, cameras[frame], K, source_size)
-                writer.write(_decorate_frame(image[:, :, ::-1], current_validity))
+                image = scene.render_third(
+                    current_validity, frame, (render_width, render_height))
+                writer.write(_decorate_frame(
+                    image[:, :, ::-1], current_validity, label_text))
                 if on_step is not None:
                     on_step(frame + 1, frames)
             for future in futures.values():

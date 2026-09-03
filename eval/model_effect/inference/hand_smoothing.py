@@ -3,7 +3,7 @@
 """Offline hand post-processing selected by MINT's production pipeline.
 
 This is the camera-frame equivalent of ``smooth_ukf_cam`` from
-``ray_pipeline/data_cleaning/cleaning_modules/ukf_cam_smoothing.py``. Model
+``ego_pipeline/data_cleaning/cleaning_modules/ukf_cam_smoothing.py``. Model
 hands already use camera-frame MANO parameters, so the world->camera->world
 wrapper from the data-cleaning pipeline cancels out here. The filter itself is
 kept the same: speed-adaptive observation noise, a constant-velocity UKF, and
@@ -19,6 +19,43 @@ _MIN_VALID = 4
 _ALPHA = 1.0
 _BETA_UT = 2.0
 _JITTER = 1e-9
+DEFAULT_UKF_PARAMS = {"q": 0.6, "r": 0.6, "beta": 2.0}
+UKF_PARAM_LIMITS = {"q": (0.1, 2.0), "r": (0.1, 2.0), "beta": (0.0, 5.0)}
+
+
+def encode_hand_smoothing_mode(params: dict | None = None) -> str:
+    """Encode validated UKF parameters in a cache-safe hand-mode string."""
+    values = dict(DEFAULT_UKF_PARAMS)
+    if params:
+        values.update(params)
+    normalized = {}
+    for name, (minimum, maximum) in UKF_PARAM_LIMITS.items():
+        value = float(values[name])
+        if not np.isfinite(value) or not minimum <= value <= maximum:
+            raise ValueError(
+                f"UKF {name} must be between {minimum:g} and {maximum:g}, got {value}"
+            )
+        normalized[name] = value
+    return "smooth@{q:.6g},{r:.6g},{beta:.6g}".format(**normalized)
+
+
+def parse_hand_smoothing_mode(mode: str) -> tuple[str, dict | None]:
+    """Return the base hand mode and optional UKF parameters."""
+    value = str(mode or "")
+    if value in {"hard", "blend"}:
+        return value, None
+    if value == "smooth":
+        return value, dict(DEFAULT_UKF_PARAMS)
+    if not value.startswith("smooth@"):
+        raise ValueError(f"unknown hand mode: {value!r}")
+    parts = value.partition("@")[2].split(",")
+    if len(parts) != 3:
+        raise ValueError(f"invalid UKF hand mode: {value!r}")
+    params = dict(zip(("q", "r", "beta"), map(float, parts)))
+    canonical = encode_hand_smoothing_mode(params)
+    normalized = dict(zip(("q", "r", "beta"), map(
+        float, canonical.partition("@")[2].split(","))))
+    return "smooth", normalized
 
 
 def _rot6d_to_mat(values: np.ndarray) -> np.ndarray:
@@ -186,7 +223,9 @@ def _smooth_channels(timestamps: np.ndarray, values: np.ndarray, *,
 
 
 def smooth_hand_output(hand: np.ndarray, valid: np.ndarray | None = None, *,
-                       q: float = 0.6, r: float = 0.6, beta: float = 2.0,
+                       q: float = DEFAULT_UKF_PARAMS["q"],
+                       r: float = DEFAULT_UKF_PARAMS["r"],
+                       beta: float = DEFAULT_UKF_PARAMS["beta"],
                        rts: float = 1.0) -> np.ndarray:
     """Smooth ``hand[T,218]`` camera-frame MANO output without changing validity."""
     from scipy.spatial.transform import Rotation

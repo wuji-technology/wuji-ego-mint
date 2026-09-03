@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""逐帧数值(GT vs Pred)：相机位姿 + 内参 FoV + 手腕位姿 + 手形 betas，供网页「整体」块下方综合数字表按帧查。
+"""逐帧数值(GT vs PRED)：相机位姿 + 内参 FoV + 手腕位姿 + 手形 betas，供网页「整体」块下方综合数字表按帧查。
 
 设计与 render/metrics.py 一致：一次算好逐帧数组，前端按当前帧取值渲染；另给整段平均值(betas/fov)供固定对比。
-- 手/相机位姿为**世界系**(整体块语义：GT×GT 相机、Pred×Pred 相机)。手形 betas、内参 fov 与坐标系无关。
+- 手/相机位姿为**世界系**(整体块语义：GT×GT 相机、PRED×PRED 相机)。手形 betas、内参 fov 与坐标系无关。
 - 旋转矩阵不直观 → 一律转**欧拉角(度, 'xyz')**；FoV 弧度→度。手只给手腕平移/朝向 + betas，不含手指 pose。
 - 无效帧(kept 掩码 False / 值非有限)置 None，保证 JSON 安全(不产生 NaN)。
 
@@ -122,7 +122,7 @@ def _mean_fov(fov_rad) -> list | None:
 def frame_numbers(raw: dict, pred: dict, decode) -> dict:
     """综合逐帧数值 dict(JSON 安全，无效帧 None)，供网页两个独立面板按帧查：
       cam:      {gt:{pos,eul,fov}|None, pred:{pos,eul,fov}|None}          —— 世界系(cm/°)，fov=度
-      hand:     {left/right:{gt:{pos,eul,betas}|None, pred:{...}|None}}   —— 世界系(GT×GT相机、Pred×Pred相机)
+      hand:     {left/right:{gt:{pos,eul,betas}|None, pred:{...}|None}}   —— 世界系(GT×GT相机、PRED×PRED相机)
       hand_cam: {left/right:{gt:{pos,eul,betas}|None, pred:{...}|None}}   —— 相机系(手腕原始 transl_cam/orient6d)
       mean:     {gt_fov,pred_fov, gt_betas:{l,r}, pred_betas:{l,r}}       —— 整段平均(固定)
     「逐帧数值（世界系）」面板用 cam+hand+mean；「逐帧数值（相机系）」面板用 hand_cam(+betas 平均)。
@@ -136,7 +136,7 @@ def frame_numbers(raw: dict, pred: dict, decode) -> dict:
     kept = raw.get("kept")
     valid_lr = np.asarray(kept, bool) if kept is not None else None
 
-    # ---- 相机(pos/eul 世界系 + fov)：GT 用 raw["cam_c2w"]/raw["cam_pose_enc"]，Pred 用 pred["pose_enc"] ----
+    # ---- 相机(pos/eul 世界系 + fov)：GT 用 raw["cam_c2w"]/raw["cam_pose_enc"]，PRED 用 pred["pose_enc"] ----
     gt_c2w = raw.get("cam_c2w")
     gt_pe = raw.get("cam_pose_enc")                        # [T,9] 或 None(裸集/旧数据)
     pred_pe = pred.get("pose_enc")
@@ -148,7 +148,7 @@ def frame_numbers(raw: dict, pred: dict, decode) -> dict:
         "pred": _cam_block(pred_c2w, pred_fov) if pred_c2w is not None else None,
     }
 
-    # ---- 手(世界系)：GT×GT相机、Pred×Pred相机 ----
+    # ---- 手(世界系)：GT×GT相机、PRED×PRED相机 ----
     hand_frame = raw.get("hand_frame", "camera")
     gt_hands = raw.get("hands")
     pred_hands = compare.pred_hand_to_schema(pred["hand"]) if pred.get("hand") is not None else None
@@ -162,7 +162,7 @@ def frame_numbers(raw: dict, pred: dict, decode) -> dict:
     hand = {side: {"gt": (gt_w[side] if gt_w else None), "pred": (pred_w[side] if pred_w else None)}
             for side in ("left", "right")}
 
-    # ---- 手(相机系)：手腕原始 transl_cam/orient6d（未转世界）。Pred 天然相机系；
+    # ---- 手(相机系)：手腕原始 transl_cam/orient6d（未转世界）。PRED 天然相机系；
     #      GT 在 hand_frame=='camera' 时即原始相机系，否则(已是世界系)做 world→cam 逆推。----
     gt_cam_hands = None
     if gt_hands:

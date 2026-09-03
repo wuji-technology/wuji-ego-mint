@@ -93,7 +93,7 @@ def main():
         pred = predictor.predict(raw["frames"])
         if "hand" not in pred:
             print("[WARN] 模型未输出 hand（enable_hand 关？），预测侧将只重投影相机、无手部。")
-        print("[hand_reproj] 解码 MANO + 渲染 GT｜Pred 并排...", flush=True)
+        print("[hand_reproj] 解码 MANO + 渲染 GT｜PRED 并排...", flush=True)
         compare.render_compare_overlay(raw, pred, out_path, mode=args.mode, alpha=args.alpha, fps=args.fps)
 
     # ---------------- 裸视频：仅预测 overlay ----------------

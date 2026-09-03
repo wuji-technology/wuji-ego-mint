@@ -21,7 +21,7 @@ COLOR_RIGHT = (120, 180, 230)
 COLOR_SKEL_LEFT = (255, 230, 80)
 COLOR_SKEL_RIGHT = (80, 200, 255)
 
-# GT/Pred 叠加画同一帧时用的统一配色（不分左右，靠位置区分）：GT 绿、Pred 红。
+# GT/PRED 叠加画同一帧时用的统一配色（不分左右，靠位置区分）：GT 绿、PRED 红。
 # 每个 palette = (mesh_color, skel_color)，BGR。
 PALETTE_GT = ((90, 210, 90), (120, 255, 120))
 PALETTE_PRED = ((80, 80, 225), (100, 100, 255))
@@ -109,7 +109,7 @@ def render_frame(frame_bgr: np.ndarray, cam_c2w: np.ndarray, K: np.ndarray,
         {'verts': (778,3)|None, 'joints': (21,3)|None, 'valid': bool}
     faces_lr: (faces_left, faces_right)。
     palette: None=按左右手默认冷/暖配色；(mesh_color, skel_color)=左右手统一用该色
-             （GT/Pred 叠加同帧时用，靠位置区分左右）。
+             （GT/PRED 叠加同帧时用，靠位置区分左右）。
     """
     faces_left, faces_right = faces_lr
     if palette is None:
@@ -147,7 +147,7 @@ def render_frame(frame_bgr: np.ndarray, cam_c2w: np.ndarray, K: np.ndarray,
 
 
 def label(frame_bgr: np.ndarray, text: str) -> None:
-    """左上角写一行标题（GT / Pred），直接改 frame。"""
+    """左上角写一行标题（GT / PRED），直接改 frame。"""
     cv2.putText(frame_bgr, text, (10, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.9,
                 (0, 0, 0), 4, cv2.LINE_AA)
     cv2.putText(frame_bgr, text, (10, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.9,
@@ -155,17 +155,21 @@ def label(frame_bgr: np.ndarray, text: str) -> None:
 
 
 def presence_label(frame_bgr: np.ndarray, rows) -> None:
-    """Draw right-aligned ``GT/Pred L:Y R:N`` rows in the top-right corner."""
+    """Draw explicit ``left: yes/no`` and ``right: yes/no`` 2D status rows."""
     rows = list(rows)
     if not rows:
         return
 
     def mark(value):
-        return "?" if value is None else ("Y" if bool(value) else "N")
+        # Legacy checkpoints without presence scores render both hands.
+        return "yes" if value is None or bool(value) else "no"
 
     font = cv2.FONT_HERSHEY_SIMPLEX
     scale, thickness = 0.58, 1
-    texts = [f"{name}  L:{mark(left)} R:{mark(right)}" for name, left, right in rows]
+    texts = [
+        f"{name + '  ' if name else ''}left: {mark(left)}  right: {mark(right)}"
+        for name, left, right in rows
+    ]
     sizes = [cv2.getTextSize(text, font, scale, thickness)[0] for text in texts]
     line_h = max(height for _width, height in sizes) + 11
     panel_w = max(width for width, _height in sizes) + 16
@@ -177,7 +181,7 @@ def presence_label(frame_bgr: np.ndarray, rows) -> None:
                   (0, 0, 0), -1)
     cv2.addWeighted(shade, 0.58, frame_bgr, 0.42, 0, dst=frame_bgr)
 
-    colors = {"GT": (120, 255, 120), "Pred": (100, 140, 255)}
+    colors = {"GT": (120, 255, 120), "PRED": (100, 140, 255)}
     for row_idx, ((name, _left, _right), text, (width, height)) in enumerate(
             zip(rows, texts, sizes)):
         x = frame_bgr.shape[1] - width - 12

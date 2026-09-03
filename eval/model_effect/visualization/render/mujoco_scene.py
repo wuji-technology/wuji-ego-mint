@@ -26,21 +26,241 @@ LEFT_RGBA = (0.36, 0.55, 0.95, 1.0)
 RIGHT_RGBA = (0.95, 0.55, 0.72, 1.0)
 CAM_RGBA = (0.62, 0.40, 0.85, 1.0)
 CUBE_RGBA = (0.88, 0.62, 0.24, 1.0)   # 参照方块（暖橙，与蓝手/粉手/灰垫布都拉得开）
+FIXED_THIRD_FOVY = 42.0
+FIXED_THIRD_VIEW_SHIFT_LEFT = 0.12
 N_VERT = 778   # MANO 顶点数
+# MuJoCo and Wuji retargeting use the same neutral background.  Keep these
+# values here so the two XML scene builders cannot silently drift apart.
+ROBOT_GROUND_RGB1 = (0.19, 0.23, 0.23)
+ROBOT_GROUND_RGB2 = (0.34, 0.38, 0.37)
+ROBOT_GROUND_TEXREPEAT = 12
+ROBOT_GROUND_HALF_RANGE = (4.0, 8.0)
+ROBOT_GROUND_RADIUS_SCALE = 1.5
+ROBOT_GROUND_RADIUS_PADDING = 1.2
+ROBOT_HEADLIGHT_AMBIENT = (0.40, 0.40, 0.40)
+ROBOT_HEADLIGHT_DIFFUSE = (0.08, 0.08, 0.08)
+ROBOT_HEADLIGHT_SPECULAR = (0.05, 0.05, 0.05)
+ROBOT_KEY_DIFFUSE = (0.50, 0.50, 0.50)
+ROBOT_KEY_SPECULAR = (0.10, 0.10, 0.10)
+ROBOT_HAND_SPECULAR = 0.20
+ROBOT_HAND_SHININESS = 0.30
+ROBOT_SHADOWCLIP = 2.5
+ROBOT_SHADOWSCALE = 1.0
+ROBOT_ZNEAR = 0.02
+ROBOT_ZFAR = 12.0
 # ghost 残影的「向白混合」权重区间：最老 _GHOST_W0(最淡) → 最新 _GHOST_W1(最接近本色)。
 _GHOST_W0, _GHOST_W1 = 0.28, 0.78
 _EGO_FLOOR_HALF_RANGE = (12.0, 24.0)
+
+
+def robot_ground_half_extent(points: np.ndarray, up=(0.0, 0.0, 1.0)) -> float:
+    """Return the shared square ground half-size for MuJoCo and Wuji scenes."""
+    values = np.asarray(points, dtype=np.float64).reshape(-1, 3)
+    values = values[np.all(np.isfinite(values), axis=1)]
+    if not len(values):
+        return float(ROBOT_GROUND_HALF_RANGE[0])
+    normal = np.asarray(up, dtype=np.float64)
+    normal /= max(1e-9, float(np.linalg.norm(normal)))
+    # The mean is rotation-equivariant, unlike an axis-aligned bbox center;
+    # MuJoCo first uprights the world while Wuji keeps the source basis.
+    center = values.mean(axis=0)
+    horizontal = values - np.outer((values - center) @ normal, normal)
+    horizontal_center = center - normal * float(center @ normal)
+    radius = float(np.percentile(
+        np.linalg.norm(horizontal - horizontal_center, axis=1), 98.0))
+    return float(np.clip(
+        radius * ROBOT_GROUND_RADIUS_SCALE + ROBOT_GROUND_RADIUS_PADDING,
+        *ROBOT_GROUND_HALF_RANGE))
+
+
+def robot_key_light_pose(up: np.ndarray, hand_points: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Return the shared slanted key-light pose for both robot renderers."""
+    normal = np.asarray(up, dtype=np.float64)
+    normal /= max(1e-9, float(np.linalg.norm(normal)))
+    lateral = np.cross(normal, np.asarray([1.0, 0.0, 0.0]))
+    if float(np.linalg.norm(lateral)) < 1e-6:
+        lateral = np.cross(normal, np.asarray([0.0, 1.0, 0.0]))
+    lateral /= max(1e-9, float(np.linalg.norm(lateral)))
+    direction = -normal + 0.35 * lateral + 0.2 * np.cross(normal, lateral)
+    direction /= max(1e-9, float(np.linalg.norm(direction)))
+    points = np.asarray(hand_points, dtype=np.float64).reshape(-1, 3)
+    points = points[np.all(np.isfinite(points), axis=1)]
+    center = points.mean(axis=0) if len(points) else np.zeros(3)
+    return center + normal * 1.6 - lateral * 0.6, direction
+
+
+def fixed_third_camera_pose(up: np.ndarray, hand_points: np.ndarray,
+                            cameras: np.ndarray, *, aspect: float,
+                            fovy: float = FIXED_THIRD_FOVY):
+    """公共固定第三视角：采用 Wuji 的观察方向，只用完整双手范围决定取景大小。"""
+    points = np.asarray(hand_points, dtype=np.float64).reshape(-1, 3)
+    points = points[np.all(np.isfinite(points), axis=1)]
+    camera_poses = np.asarray(cameras, dtype=np.float64)
+    if not len(points) or camera_poses.ndim != 3:
+        raise ValueError("固定第三视角缺少有效手点或相机位姿")
+    up = np.asarray(up, dtype=np.float64)
+    up /= max(1e-9, float(np.linalg.norm(up)))
+    low, high = np.percentile(points, [1, 99], axis=0)
+    target = (low + high) * 0.5
+    radius = max(0.08, float(np.percentile(
+        np.linalg.norm(points - target, axis=1), 99)))
+
+    source_forward = camera_poses[:, :3, 2]
+    source_forward = source_forward[np.all(np.isfinite(source_forward), axis=1)]
+    source_forward = (source_forward.mean(axis=0) if len(source_forward)
+                      else np.asarray([1.0, 0.0, 0.0]))
+    source_forward -= up * float(source_forward @ up)
+    if float(np.linalg.norm(source_forward)) < 1e-6:
+        source_forward = np.cross(up, np.asarray([1.0, 0.0, 0.0]))
+    source_forward /= max(1e-9, float(np.linalg.norm(source_forward)))
+    right = np.cross(source_forward, up)
+    right /= max(1e-9, float(np.linalg.norm(right)))
+    observer = -source_forward + right * 0.45 + up * 0.38
+    observer /= max(1e-9, float(np.linalg.norm(observer)))
+
+    vertical_tangent = np.tan(np.radians(float(fovy)) / 2.0)
+    limiting_tangent = min(vertical_tangent, vertical_tangent * float(aspect))
+    distance = radius / max(0.1, limiting_tangent) * 1.12
+    position = target + observer * distance
+    # Pan the camera rig slightly toward screen-left.  Content near the left
+    # crop edge then moves right into the safe area without zooming out.
+    view_forward = target - position
+    view_forward /= max(1e-9, float(np.linalg.norm(view_forward)))
+    screen_right = np.cross(view_forward, up)
+    screen_right /= max(1e-9, float(np.linalg.norm(screen_right)))
+    shift = -screen_right * radius * FIXED_THIRD_VIEW_SHIFT_LEFT
+    return position + shift, target + shift, up, radius
+
+
+def _rotation_align(source: np.ndarray, target: np.ndarray) -> np.ndarray:
+    source = np.asarray(source, dtype=np.float64)
+    target = np.asarray(target, dtype=np.float64)
+    source /= max(1e-9, float(np.linalg.norm(source)))
+    target /= max(1e-9, float(np.linalg.norm(target)))
+    cross = np.cross(source, target)
+    cosine = float(np.dot(source, target))
+    if float(np.linalg.norm(cross)) < 1e-8:
+        return np.eye(3) if cosine > 0 else np.diag([1.0, -1.0, -1.0])
+    skew = np.asarray([
+        [0.0, -cross[2], cross[1]],
+        [cross[2], 0.0, -cross[0]],
+        [-cross[1], cross[0], 0.0],
+    ])
+    return np.eye(3) + skew + skew @ skew * (1.0 / (1.0 + cosine))
+
+
+def canonicalize_robot_coordinates(cameras: np.ndarray,
+                                    hand_points: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Use one upright/centered gauge for MuJoCo and Wuji camera overlays."""
+    transforms = np.asarray(cameras, dtype=np.float64).copy()
+    points = np.asarray(hand_points, dtype=np.float64).reshape(-1, 3)
+    finite_points = points[np.all(np.isfinite(points), axis=1)]
+    if transforms.ndim != 3 or transforms.shape[1:] != (4, 4):
+        raise ValueError("robot camera poses must have shape [T,4,4]")
+    if not len(finite_points):
+        finite_points = np.zeros((1, 3), dtype=np.float64)
+    down = transforms[:, :3, 1]
+    down = down[np.all(np.isfinite(down), axis=1)]
+    if len(down) and float(np.linalg.norm(down.mean(axis=0))) >= 1e-6:
+        up = -down.mean(axis=0)
+        up /= max(1e-9, float(np.linalg.norm(up)))
+    else:
+        up = np.asarray([0.0, 0.0, 1.0], dtype=np.float64)
+    rotation = _rotation_align(up, np.asarray([0.0, 0.0, 1.0]))
+    transformed_points = finite_points @ rotation.T
+    transforms[:, :3, :3] = rotation[None] @ transforms[:, :3, :3]
+    transforms[:, :3, 3] = transforms[:, :3, 3] @ rotation.T
+    origin = np.median(transformed_points, axis=0)
+    transforms[:, :3, 3] -= origin
+    return rotation, origin, transforms
+
+
+def configure_fixed_camera(scene, position: np.ndarray, target: np.ndarray,
+                           up: np.ndarray, *, fovy: float, aspect: float) -> None:
+    """把同一台透视相机写入 MuJoCo MjvScene 的双目 GL camera。"""
+    forward = np.asarray(target, dtype=np.float64) - np.asarray(position, dtype=np.float64)
+    forward /= max(1e-9, float(np.linalg.norm(forward)))
+    camera_up = np.asarray(up, dtype=np.float64)
+    camera_up = camera_up - forward * float(camera_up @ forward)
+    camera_up /= max(1e-9, float(np.linalg.norm(camera_up)))
+    for camera in scene.camera:
+        camera.pos[:] = position
+        camera.forward[:] = forward
+        camera.up[:] = camera_up
+        near = float(camera.frustum_near)
+        half_height = np.tan(np.radians(float(fovy)) / 2.0) * near
+        camera.frustum_center = 0.0
+        camera.frustum_width = half_height * float(aspect)
+        camera.frustum_bottom = -half_height
+        camera.frustum_top = half_height
+
+
+def prepare_fixed_camera_frusta(cameras: np.ndarray, hand_radius: float) -> dict:
+    """Prepare one fixed start marker plus the live camera marker."""
+    transforms = np.asarray(cameras, dtype=np.float64)
+    if transforms.ndim != 3 or transforms.shape[1:] != (4, 4):
+        return {}
+    valid_indices = np.flatnonzero(np.all(np.isfinite(transforms), axis=(1, 2)))
+    if not len(valid_indices):
+        return {}
+    return {
+        "transforms": transforms,
+        "valid_indices": valid_indices,
+        "size": max(0.04, float(hand_radius)) * 0.18,
+    }
+
+
+def fixed_camera_frusta(prepared: dict, current_frame: int) -> tuple:
+    """Return the faded fixed start frustum and the current live frustum."""
+    if not prepared:
+        return ()
+    transforms = prepared["transforms"]
+    valid_indices = prepared["valid_indices"]
+    valid_end = int(np.searchsorted(
+        valid_indices, int(current_frame), side="right")) - 1
+    if valid_end < 0:
+        valid_end = 0
+    current_index = int(valid_indices[valid_end])
+
+    # At the first frame both candidates overlap, so only live is visible.
+    selected = {}
+    for index, alpha in (
+            (int(valid_indices[0]), 0.18),
+            (current_index, 0.98)):
+        selected[index] = alpha
+
+    size = float(prepared["size"])
+    width = 2.0
+    half = size * 0.6
+    lines = []
+    for index, alpha in selected.items():
+        transform = transforms[index]
+        center, rotation = transform[:3, 3], transform[:3, :3]
+        corners = (rotation @ np.asarray([
+            [half, half, size], [-half, half, size],
+            [-half, -half, size], [half, -half, size],
+        ]).T).T + center
+        rgba = (*CAM_RGBA[:3], alpha)
+        for corner in corners:
+            lines.append((center.copy(), corner.copy(), width, rgba))
+        for corner in range(4):
+            lines.append((corners[corner].copy(),
+                          corners[(corner + 1) % 4].copy(), width, rgba))
+    return tuple(lines)
 
 
 def vertex_normals(verts: np.ndarray, faces: np.ndarray) -> np.ndarray:
     """按面法线累加求逐顶点法线 (V,3)，单位化。"""
     verts = np.asarray(verts, dtype=np.float64)
     faces = np.asarray(faces, dtype=np.int64)
-    n = np.zeros_like(verts)
     tri = verts[faces]                                   # (F,3,3)
     fn = np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0])
-    for k in range(3):
-        np.add.at(n, faces[:, k], fn)
+    indices = faces.reshape(-1)
+    repeated = np.repeat(fn, 3, axis=0)
+    n = np.stack([
+        np.bincount(indices, weights=repeated[:, axis], minlength=len(verts))
+        for axis in range(3)
+    ], axis=1)
     ln = np.linalg.norm(n, axis=1, keepdims=True)
     ln[ln == 0] = 1.0
     return (n / ln).astype(np.float32)
@@ -127,25 +347,25 @@ class HandWorldScene:
   <compiler angle="radian"/>
   <visual>
     <global offwidth="{self.width}" offheight="{self.height}" azimuth="140" elevation="20"/>
-    <quality shadowsize="8192" offsamples="2"/>
-    <!-- 环境光压低、方向光提亮 → 手在垫布上的投影才有明暗差看得见（原 ambient=0.82 把阴影冲没了）。 -->
-    <headlight ambient="0.40 0.40 0.40" diffuse="0.08 0.08 0.08" specular="0.05 0.05 0.05"/>
+    <quality shadowsize="4096" offsamples="2"/>
+    <!-- 环境光压低、方向光提亮 → 手在地面上的投影才有明暗差看得见。 -->
+    <headlight ambient="{' '.join(f'{v:.2f}' for v in ROBOT_HEADLIGHT_AMBIENT)}" diffuse="{' '.join(f'{v:.2f}' for v in ROBOT_HEADLIGHT_DIFFUSE)}" specular="{' '.join(f'{v:.2f}' for v in ROBOT_HEADLIGHT_SPECULAR)}"/>
     <!-- shadowclip 收紧贴合场景、shadowscale 收窄阴影视锥 → 去掉 shadow acne 噪点、
          让方向光在垫布上投出干净的接触阴影（原 shadowclip=10 太大导致 shadow map 分辨率浪费、满屏噪点）。
          取景改为「手 + 相机轨迹一起入画」后场景跨度变大（~1m），1.6 会把远端阴影裁掉，放宽到 2.5。 -->
-    <map shadowclip="2.5" shadowscale="1.0" znear="0.02" zfar="12"/>
+    <map shadowclip="{ROBOT_SHADOWCLIP}" shadowscale="{ROBOT_SHADOWSCALE}" znear="{ROBOT_ZNEAR}" zfar="{ROBOT_ZFAR}"/>
   </visual>
   <asset>
     <texture type="skybox" builtin="gradient" rgb1="0.95 0.96 0.98" rgb2="0.78 0.82 0.88"
              width="512" height="512"/>
-    <texture name="ground_grid" type="2d" builtin="checker" rgb1="0.19 0.23 0.23"
-             rgb2="0.34 0.38 0.37" width="512" height="512"/>
+    <texture name="ground_grid" type="2d" builtin="checker" rgb1="{' '.join(f'{v:.2f}' for v in ROBOT_GROUND_RGB1)}"
+             rgb2="{' '.join(f'{v:.2f}' for v in ROBOT_GROUND_RGB2)}" width="512" height="512"/>
     <!-- 衬底(浅)与操作垫布(略深)分两材质：垫布比衬底暗一档，边界读得出、投影落上去也有明暗差。 -->
-    <material name="ground" texture="ground_grid" texrepeat="12 12" texuniform="true"
+    <material name="ground" texture="ground_grid" texrepeat="{ROBOT_GROUND_TEXREPEAT} {ROBOT_GROUND_TEXREPEAT}" texuniform="true"
               rgba="1 1 1 1" reflectance="0.0" specular="0.0" shininess="0.0"/>
     <material name="mat" rgba="0.55 0.56 0.61 1.0" reflectance="0.0" specular="0.0" shininess="0.0"/>
-    <material name="mL" rgba="{_rgba(LEFT_RGBA)}" specular="0.2" shininess="0.3"/>
-    <material name="mR" rgba="{_rgba(RIGHT_RGBA)}" specular="0.2" shininess="0.3"/>
+    <material name="mL" rgba="{_rgba(LEFT_RGBA)}" specular="{ROBOT_HAND_SPECULAR}" shininess="{ROBOT_HAND_SHININESS}"/>
+    <material name="mR" rgba="{_rgba(RIGHT_RGBA)}" specular="{ROBOT_HAND_SPECULAR}" shininess="{ROBOT_HAND_SHININESS}"/>
     <!-- 参照方块：暖橙，与蓝手/粉手/灰垫布都拉开；高光稍强 → 三个面明暗分明，一眼看出是立方体。 -->
     <material name="mcube" rgba="{_rgba(CUBE_RGBA)}" specular="0.35" shininess="0.45"/>
     {_mesh_xml("hand_L", init_l, faces_left)}
@@ -154,7 +374,7 @@ class HandWorldScene:
   </asset>
   <worldbody>
     <light name="key" pos="0.3 0.3 2" dir="-0.2 -0.2 -1" directional="true" castshadow="true"
-           diffuse="0.5 0.5 0.5" specular="0.1 0.1 0.1"/>
+           diffuse="{' '.join(f'{v:.2f}' for v in ROBOT_KEY_DIFFUSE)}" specular="{' '.join(f'{v:.2f}' for v in ROBOT_KEY_SPECULAR)}"/>
     {floor_xml}
     {mat_xml}
     {cube_xml}
@@ -248,7 +468,8 @@ class HandWorldScene:
         a[3] = info["rgba0"][3] if visible else 0.0
         self.model.geom_rgba[info["gid"]] = a
 
-    def place_floor(self, points: np.ndarray, margin=0.03, fwd_az=None):
+    def place_floor(self, points: np.ndarray, margin=0.03, fwd_az=None,
+                    extent_points: np.ndarray | None = None):
         """把浅灰地面与深灰垫布放到手部点云正下方：地面接地、垫布居中且按手水平范围定尺寸。
 
         地面/垫布是薄 box（避免 plane 的掠射 shadow acne），box 的顶面 = 中心 z + 半高，
@@ -262,10 +483,15 @@ class HandWorldScene:
         pts = pts[np.all(np.isfinite(pts), axis=1)]
         if not len(pts):
             return
+        extent = pts if extent_points is None else np.asarray(
+            extent_points, dtype=np.float64).reshape(-1, 3)
+        extent = extent[np.all(np.isfinite(extent), axis=1)]
+        if not len(extent):
+            extent = pts
         # 稳健包围盒（2–98 百分位）定手水平运动范围，避免无效帧/离群点把垫布撑大。
+        cxy = pts[:, :2].mean(axis=0)
         lo = np.percentile(pts, 2, axis=0)
         hi = np.percentile(pts, 98, axis=0)
-        cxy = (lo[:2] + hi[:2]) / 2.0
         half = (hi[:2] - lo[:2]) / 2.0
         # z 下界用近最低分位（0.1%）：传入的是网格顶点，取近最低点让手最低接触帧真正贴地、
         # 又避开个别离群顶点；再减 margin 留极小间隙，保证网格不穿出地台。
@@ -282,14 +508,18 @@ class HandWorldScene:
         self.model.body_pos[self._floor_bid] = bp
         self.model.body_quat[self._floor_bid] = ground_quat
         fs = np.array(self.model.geom_size[self._floor_gid])
-        fs[0] = float(max(half)) * 2.4 + 0.20
-        fs[1] = float(max(half)) * 2.4 + 0.20
+        shared_half = robot_ground_half_extent(extent)
+        fs[0] = fs[1] = shared_half
         self.model.geom_size[self._floor_gid] = fs
         # _mat_center/_mat_half 记手运动区域中心与半范围（供 mujoco_view 取景留白用；非地台整体尺寸）。
         self._mat_center = np.array([cxy[0], cxy[1], zmin])
         self._mat_half = half.copy()
         # 手部 3D 半径（稳健 90 分位）：ego 垫布尺寸/景深按它派生，保证垫布刚好裹住双手。
         self._hand_rad = float(np.percentile(np.linalg.norm(pts - pts.mean(0), axis=1), 90))
+        light_pos, light_dir = robot_key_light_pose(np.asarray([0.0, 0.0, 1.0]), pts)
+        if self._light_id >= 0:
+            self.model.light_pos[self._light_id] = light_pos
+            self.model.light_dir[self._light_id] = light_dir
         # 操作垫布(matb)：比衬底小一圈(裹住手运动范围)、顶面略高于衬底避免 z-fight。
         # 有 fwd_az 时按操作者坐标系(右向 ex、前向 ey)量取半范围并绕 z 旋转，使垫布对齐操作方向。
         if fwd_az is not None:
@@ -578,6 +808,23 @@ class HandWorldScene:
                              np.asarray(p0, dtype=np.float64), np.asarray(p1, dtype=np.float64))
         scene.ngeom += 1
 
+    @staticmethod
+    def _add_screen_line(scene, p0, p1, width, rgba):
+        """Add an unlit pixel-width line; unlike capsules it casts no shadow."""
+        if scene.ngeom >= scene.maxgeom:
+            return
+        geom = scene.geoms[scene.ngeom]
+        mujoco.mjv_initGeom(
+            geom, mujoco.mjtGeom.mjGEOM_LINE,
+            np.zeros(3), np.zeros(3), np.zeros(9),
+            np.asarray(rgba, dtype=np.float32),
+        )
+        mujoco.mjv_connector(
+            geom, mujoco.mjtGeom.mjGEOM_LINE, float(width),
+            np.asarray(p0, dtype=np.float64), np.asarray(p1, dtype=np.float64),
+        )
+        scene.ngeom += 1
+
     def _add_frustum(self, scene, c2w, size, rgba, width):
         t = np.asarray(c2w[:3, 3], dtype=np.float64)
         R = np.asarray(c2w[:3, :3], dtype=np.float64)
@@ -589,15 +836,48 @@ class HandWorldScene:
         for i in range(4):
             self._add_line(scene, cs[i], cs[(i + 1) % 4], width, rgba)  # 底面矩形
 
-    def _draw_cam_trail(self, scene, cam_c2w, cur, *, max_frusta=8, size=None, width=None):
+    def fit_fixed_third_camera(self, up, hand_points, cameras):
+        """Fit the shared Wuji-style third-person camera to the complete hand motion."""
+        position, target, camera_up, radius = fixed_third_camera_pose(
+            up, hand_points, cameras, aspect=self.width / self.height)
+        self._fixed_third = {
+            "position": position, "target": target, "up": camera_up,
+            "radius": radius,
+        }
+        self._fixed_camera_frusta = prepare_fixed_camera_frusta(cameras, radius)
+
+    def render_fixed_third(self, current_frame: int):
+        """Render one faded start camera pose plus the live pose."""
+        if not hasattr(self, "_fixed_third"):
+            raise RuntimeError("固定第三视角尚未完成取景")
+        self.renderer.update_scene(self.data, self.cam)
+        view = self._fixed_third
+        configure_fixed_camera(
+            self.renderer.scene, view["position"], view["target"], view["up"],
+            fovy=FIXED_THIRD_FOVY, aspect=self.width / self.height)
+        for start, end, width, rgba in fixed_camera_frusta(
+                self._fixed_camera_frusta, current_frame):
+            self._add_screen_line(self.renderer.scene, start, end, width, rgba)
+        return self.renderer.render()
+
+    def _draw_cam_trail(self, scene, cam_c2w, cur, *, max_frusta=8,
+                        max_points=240, size=None, width=None, full_trail=False):
         traj = np.asarray(cam_c2w, dtype=np.float64)          # (T,4,4)
         # 锥体尺寸按手部 3D 半径派生（原来写死 0.05，场景尺度一变就要么看不见要么糊满屏）。
         size = float(self._hand_rad * 0.35) if size is None else float(size)
         width = size * 0.06 if width is None else float(width)
-        centers = traj[:cur + 1, :3, 3]
-        for i in range(1, len(centers)):                      # 轨迹折线（细，作弧线连接）
-            self._add_line(scene, centers[i - 1], centers[i], width * 0.5,
-                           (*CAM_RGBA[:3], 0.45))
+        centers = traj[:, :3, 3] if full_trail else traj[:cur + 1, :3, 3]
+        stride = max(1, int(np.ceil(len(centers) / max(2, int(max_points)))))
+        trail_indices = list(range(0, len(centers), stride))
+        if trail_indices and trail_indices[-1] != len(centers) - 1:
+            trail_indices.append(len(centers) - 1)
+        for start, end in zip(trail_indices, trail_indices[1:]):
+            if not np.isfinite(centers[[start, end]]).all():
+                continue
+            phase = end / max(1, len(centers) - 1)
+            alpha = 0.16 + 0.78 * phase ** 1.4
+            self._add_line(scene, centers[start], centers[end], width * 0.5,
+                           (*CAM_RGBA[:3], alpha))
         # 按世界位置最小间距抽锥体：相邻入选锥体世界距离 < 阈值就跳过 → 相机位移小时不会把十几个锥体
         # 叠成一坨；位移大时自然沿轨迹排成一串。始终保留当前帧(末帧)锥体。
         min_gap = size * 1.5
@@ -605,6 +885,7 @@ class HandWorldScene:
         for i in range(1, len(centers)):
             if np.linalg.norm(centers[i] - centers[idxs[-1]]) >= min_gap:
                 idxs.append(i)
+        # 全段轨迹模式仍把当前相机留到最后画，使当前帧锥体最醒目。
         if idxs and idxs[-1] != cur:
             idxs.append(cur)
         if len(idxs) > max_frusta:                            # 超上限沿链等距抽稀
@@ -612,6 +893,26 @@ class HandWorldScene:
         for k, i in enumerate(idxs):                          # 锥体：越近越实（由淡到实）
             a = 0.2 + 0.7 * (k + 1) / max(1, len(idxs))
             self._add_frustum(scene, traj[i], size, (*CAM_RGBA[:3], a), width)
+
+    def _draw_hand_trails(self, scene, joints_l, joints_r, validity, *, max_points=240):
+        """画完整左右腕轨迹；时间越晚越实，与 Fixed World 的渐变方向一致。"""
+        valid = np.asarray(validity, dtype=bool)
+        width = max(0.0008, float(self._hand_rad) * 0.012)
+        for hand_index, (joints, color) in enumerate((
+                (joints_l, LEFT_RGBA), (joints_r, RIGHT_RGBA))):
+            points = np.asarray(joints, dtype=np.float64)[:, 0]
+            stride = max(1, int(np.ceil(len(points) / max(2, int(max_points)))))
+            indices = list(range(0, len(points), stride))
+            if indices and indices[-1] != len(points) - 1:
+                indices.append(len(points) - 1)
+            for start, end in zip(indices, indices[1:]):
+                if (not valid[start:end + 1, hand_index].all()
+                        or not np.isfinite(points[[start, end]]).all()):
+                    continue
+                phase = end / max(1, len(points) - 1)
+                alpha = 0.18 + 0.82 * phase ** 1.4
+                self._add_line(scene, points[start], points[end], width,
+                               (*color[:3], alpha))
 
     # ---- 逐帧把双手网格摆好（多视角渲染前只做一次，避免重复上传 GPU）----
     def bake_frame(self, verts_l, verts_r, valid_l, valid_r):
@@ -663,7 +964,8 @@ class HandWorldScene:
         return self.renderer.render()
 
     # ---- 第三人称环视：给定方位角/仰角，lookat/distance 用 autofit 结果 ----
-    def render_free(self, azimuth, elevation, cam_c2w, cur, *, draw_trail=True) -> np.ndarray:
+    def render_free(self, azimuth, elevation, cam_c2w, cur, *, draw_trail=True,
+                    full_trail=False, hand_trails=None, hand_validity=None) -> np.ndarray:
         self.cam.type = mujoco.mjtCamera.mjCAMERA_FREE
         self.cam.lookat[:] = self._fit_center
         self.cam.distance = self._fit_dist
@@ -671,7 +973,11 @@ class HandWorldScene:
         self.cam.elevation = float(elevation)
         self.renderer.update_scene(self.data, self.cam)
         if draw_trail and cam_c2w is not None:
-            self._draw_cam_trail(self.renderer.scene, cam_c2w, cur)
+            self._draw_cam_trail(
+                self.renderer.scene, cam_c2w, cur, full_trail=full_trail)
+        if hand_trails is not None and hand_validity is not None:
+            self._draw_hand_trails(
+                self.renderer.scene, hand_trails[0], hand_trails[1], hand_validity)
         return self.renderer.render()
 
     # ---- 第一人称 ego：把 OpenCV cam→world 外参装到 MuJoCo 固定相机上（翻 y/z 轴）----

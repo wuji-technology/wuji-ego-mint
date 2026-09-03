@@ -29,7 +29,7 @@ visualization/
 │   ├── compare.py        GT/预测独立解算 + 端到端 2D 渲染（离线并排 render_compare_overlay）
 │   ├── world.py          世界系 3D payload 构建（joints/traj/conn/valid/cam_R/cam_t，网页 canvas 用）
 │   ├── fixed_world_video.py  固定世界 Canvas 的逐帧 H.264 导出渲染器
-│   ├── mujoco_video.py   网页按需 MuJoCo 离屏渲染（视频相机视角 H.264 MP4）
+│   ├── mujoco_video.py   网页按需 MuJoCo 离屏渲染（固定第三视角 H.264 MP4）
 │   ├── numbers.py        逐帧数值面板（相机/手位姿、betas、FoV）
 │   └── metrics.py        逐帧 loss 复算（共用；复用训练框架 losses，与训练同切窗）
 ├── viewer/               网页后端子包（const/ckpts/netutil/store/routes/web）
@@ -62,7 +62,7 @@ $PY eval/model_effect/visualization/hand_reproj.py \
 - 输出：`output/eval/<model>/hand_reproj/<时间戳>/compare.mp4`（mp4v 写完转 H.264，VSCode/浏览器可直接播）。
 
 ## 网页端可视化（交互，推荐 held-out 逐 episode 排查）
-`viewer_web.py` 起一个网页上位机。页面生成一个端到端 **2D GT vs Pred** 视频，并依次显示**固定世界·3D**与**当前相机·3D**；GT 图层全部使用 GT，Pred 图层全部使用模型预测。**MuJoCo·仿真**与 **Wuji Hand·Retargeting** 默认关闭，不请求对应后端，也不会创建 MuJoCo/EGL 渲染上下文；用户从顶栏或右侧模块栏手动开启后，才检查已有缓存或开始后台渲染。前者显示 MANO 世界系结果，后者把同一份模型 21 点输出驱动一代手 URDF/MJCF；无 GT 裸视频同时开启两者时左右并排。
+`viewer_web.py` 起一个网页上位机。页面生成一个端到端 **2D GT vs Pred** 视频，并依次显示**固定世界·3D**与**当前相机·3D**；GT 图层全部使用 GT，Pred 图层全部使用模型预测。**MuJoCo·仿真**与 **Wuji Hand·Retargeting** 默认关闭，不请求对应后端，也不会创建 MuJoCo/EGL 渲染上下文；用户从顶栏或右侧模块栏手动开启后，才检查已有缓存或开始后台渲染。前者显示 MANO 世界系结果，后者把同一份模型 21 点输出驱动一代手 URDF/MJCF。有 GT 时两个方法各占一栏、栏内分别显示 `GT | PRED`；无 GT 裸视频时每栏只显示 PRED。
 
 顶部 Checkpoint 支持直接输入绝对路径或项目相对路径，也可从 `/` 开始浏览任意服务器目录；可选择单个 `.safetensors/.bin/.pt/.pth/.ckpt` 文件，或选择直接包含这些权重的 checkpoint 目录。
 
@@ -73,17 +73,17 @@ $PY eval/model_effect/visualization/hand_reproj.py \
 - **布局**：`叠加`（默认）把 GT/Pred 画在同一处（2D GT绿/Pred红；3D GT实线/Pred虚线，左手青右手金）；右上角分两行标注 GT/Pred 的 `L/R` 是否存在。`并排`回到左右两块，并在两个 panel 右上角分别标注各自状态。
 - **相机推理**：交互推理和批量推理均默认选择“最大窗分窗 · Max Chunked”，以当前显卡 exact-full 安全上限作为窗长；仍可手动切换训练窗长分窗、流式或整段模式。
 - 唯一的 2D 视频负责播放/拖动，并驱动固定世界、当前相机、手动开启的 MuJoCo/Retargeting 与逐帧 loss 面板。
-- **固定世界·3D**：以各路首帧相机的完整位姿一次性建立共同显示坐标系（首帧相机位置为原点、朝向为世界轴），之后视图不再随相机旋转。默认视角是 `az=-0.61 / el=0.31`（约 -35°/18° 的 3/4 俯视，正视图读不出纵深），网页 `app.js` 的 `VIEW_AZ0/VIEW_EL0` 与 `render/fixed_world_video.py` 的 `DEFAULT_AZ/DEFAULT_EL` 必须一致（有 contract 测试盯着）。画面带**网格参考地面**：固定世界系没有天然重力轴，「上」取全段相机 `+Y(下)` 平均值的反向；地面过「沿上方向的最低点再下移 `max(15cm, 0.28×场景半径)`」，格距取 `1/2/5×10^k cm` 的整齐值（约 10 格覆盖 2×半径，格子本身即尺度参照），每 5 格加亮一条、离中心越远越淡成圆盘。手/相机会在地面上投出落影并画到地面的虚线垂线；轨迹改为随时间渐亮的尾迹（GT 实线、Pred 长虚线），骨架是深色描边 + 本色芯 + 圆头端点，背景为径向暗角，左上标题卡 / 左下图例与帧号 / 右下比例尺。导出 mp4 内部按 2× 超采样再 `INTER_AREA` 缩回，线条更锐（约 16 ms/帧）。相机姿态在所有手/轨迹之后置顶绘制，三轴均随真实相机旋转：GT 使用 `X红/Y绿/Z蓝`，Pred 使用明显不同的 `X橙/Y黄/Z紫`；所有完整姿态轴在相机框外均为实线，只有方框遮住的部分会在框内以短虚线透视显示。光心由绿色实心/透明红框小方块表示，方框随 3D 视图缩放，画布不显示 `GT/Pred` 相机文字。该窗口专属的「轨迹 / 相机姿态↔手」开关位于标题旁，不再占用顶部全局工具栏；「轨迹」会同时显示或隐藏手部与相机轨迹，所有轨迹均为虚线（GT 短虚线、Pred 长虚线）。青/金实线连接相机与左右手腕并标出真实三维距离（cm）。固定世界视图使用左键拖动平移、`Ctrl+左键`拖动旋转、滚轮缩放。
+- **固定世界·3D**：以各路首帧相机的完整位姿一次性建立共同显示坐标系（首帧相机位置为原点、朝向为世界轴），之后视图不再随相机旋转。默认视角是 `az=-0.61 / el=0.31`（约 -35°/18° 的 3/4 俯视，正视图读不出纵深），网页 `app.js` 的 `VIEW_AZ0/VIEW_EL0` 与 `render/fixed_world_video.py` 的 `DEFAULT_AZ/DEFAULT_EL` 必须一致（有 contract 测试盯着）。画面带**网格参考地面**：固定世界系没有天然重力轴，「上」取全段相机 `+Y(下)` 平均值的反向；地面过「沿上方向的最低点再下移 `max(15cm, 0.28×场景半径)`」，格距取 `1/2/5×10^k cm` 的整齐值（约 10 格覆盖 2×半径，格子本身即尺度参照），每 5 格加亮一条、离中心越远越淡成圆盘。手/相机会在地面上投出落影并画到地面的虚线垂线；轨迹改为随时间渐亮的尾迹（GT 实线、Pred 长虚线），骨架是深色描边 + 本色芯 + 圆头端点，背景为径向暗角，左上标题卡 / 左下图例与帧号 / 右下比例尺。导出 mp4 内部按 2× 超采样再 `INTER_AREA` 缩回，线条更锐（约 16 ms/帧）。世界轴与当前相机姿态轴全部使用低透明实线，三轴仍随真实相机旋转：GT 使用 `X红/Y绿/Z蓝`，Pred 使用明显不同的 `X橙/Y黄/Z紫`，但不会压过手部和轨迹。该窗口专属的「轨迹 / 相机姿态↔手」开关位于标题旁；青/金实线连接相机与左右手腕并标出真实三维距离（cm）。固定世界视图使用左键拖动平移、`Ctrl+左键`拖动旋转、滚轮缩放。
 - **当前相机·3D**：每帧分别按 `X_cam = R_w2c · (X_world - C_world)` 把 GT 手变到 GT 相机系、Pred 手变到 Pred 相机系，再在统一的 OpenCV 轴约定（X 向右、Y 向下、Z 向前，光心为原点）下叠加或并排显示。该面板紧跟固定世界，默认只画当前帧双手骨架、相机原点三轴和比例尺，不连接跨帧世界轨迹；用于直接核对手相对 ego 相机的方向、深度与尺度。支持独立旋转、缩放、平移和当前帧 PNG 保存。
-- **MuJoCo·仿真**：默认关闭；用户手动开启面板后，使用当前 GT 或 Pred 的世界系 MANO 网格服务端离屏渲染，已有缓存则直接加载。每帧直接复用「整体·2D」对应数据源的相机外参和像素内参，并通过 MuJoCo off-axis frustum 保留焦距、主点与原视频画幅，因此不是额外的第三人称观察角度。Web 场景不放桌面或操作垫；第一人称使用 checker 网格参考地面，基准位置比手部最低点低约 `0.85 m`，地面半边长至少 `12 m`、浅俯角时按相机距离扩展到 `24 m`，并只消除相机滚转在地面上造成的斜地平线，不改变手部和相机投影。生成的视频跟随「整体·2D」的播放、暂停、拖动和倍速；再次关闭不会启动新的渲染任务，已完成结果按输入和推理参数缓存。
-- **Wuji Hand·Retargeting**：默认关闭，用户手动开启面板后才启动下述解算与渲染。它直接使用模型解出的 OpenPose/MediaPipe 顺序 21 点（腕、拇指到小指），左右手分别经过 `wuji-retargeting` 的 adaptive analytical IK，按关节名映射到 `wuji-description/hand/body/` 的 20-DoF URDF/MJCF。`eval/simulate/wuji-retargeting/` 只保留运行所需代码、官方左右手配置和 URDF/MJCF/STL；其中算法文件与配置逐字节复制自 `thirdparty/wuji-retargeting/`，不在渲染层修改。机器人根节点按每帧手腕坐标系放回世界坐标，左右手再通过与「整体·2D」相同的相机外参、完整像素内参和原视频宽高比渲染到同一画面，因此像素位置和透视均与源相机对齐。**左右手合并在同一个 MuJoCo 场景里**（`_merged_hand_xml` 在内存里把官方两份 MJCF 合成一个模型：mesh 改绝对路径、视觉 geom 归各手一个 group 并换成统一材质 —— vendored 文件不动）：遮挡由 MuJoCo 自己处理，不再需要双模型 + 深度合成；场景另配浅灰渐变天空、checker 网格参考地面（薄 box，避免大 plane 掠射的 shadow acne）与投影主光，观感取值对齐 `render/mujoco_scene.py`。地面沿同一套重力估计（全段相机 `+Y` 取反）放在最低手点下方 `_FLOOR_CLEARANCE = 0.35 m`（比 MuJoCo 面板的 `0.85 m` 近：ego 取景下 0.85 m 会把地面和阴影推出画面），半边长 `4~8 m`；手与相机都不旋转，因此像素对齐与改造前逐像素一致（合成数据回归：掩膜 IoU ≥ 0.999、质心漂移 < 0.1 px）。未通过 presence mask 的手按 `geomgroup` 逐帧隐藏（不出现也不投影）并在 HUD 标 `MISS`；HUD 为圆角半透明标题卡 + 左右手 `LIVE/MISS` 状态卡 + 轻暗角。播放、暂停、拖动和倍速跟随「整体·2D」。运行环境需安装 `mujoco>=3.6`、`pin==3.8.0` 与 `nlopt`。
+- **MuJoCo·仿真**：默认关闭；用户手动开启面板后，有 GT 时分别请求 GT 与 PRED 两路服务端离屏视频并在同一方法栏内并排比较，无 GT 时只显示 PRED；已有缓存则直接加载。Wuji Hand 面板采用相同的 GT/PRED 组织方式，两个方法不再互相并排。MuJoCo 与 Wuji Hand 共用由 Wuji 观察方向定义的同一台固定第三人称相机，取景范围只由完整双手运动决定，不把源相机轨迹计入包围盒。为了提高长视频渲染速度，这两个面板不再逐帧提交左腕/右腕/相机连续轨迹，只保留一个低透明度起点相机框和一个随当前帧移动的深色实时框；二者使用无光照屏幕线，不在地面投下框形阴影。完整轨迹仍在「固定世界·3D」面板中可视化。地面统一放在最低关节点下约 `0.08 m`，所有机器人视频都跟随「整体·2D」播放。
+- **Wuji Hand·Retargeting**：默认关闭，用户手动开启面板后才启动解算与渲染。它使用模型的 21 点经 adaptive analytical IK 驱动 20-DoF Wuji Hand，左右手合并在同一个 MuJoCo 场景中原生处理遮挡。视角、取景大小和地面高度全部复用 MuJoCo 面板的公共实现；右上角不重复显示仅属于 2D 视频的左右手状态。运行环境需安装 `mujoco>=3.6`、`pin==3.8.0` 与 `nlopt`。
 
   ```bash
   $PY -m pip install 'mujoco>=3.6' 'pin==3.8.0' nlopt \
       'cmeel-urdfdom>=4,<5' 'cmeel-tinyxml2>=10,<11'
   ```
 - **保存当前帧**：「保存当前帧」可从整体 2D、固定世界 3D、当前相机 3D、MuJoCo 或 Wuji Hand 中选择一个当前画面并下载 PNG。固定世界 3D 默认采用更常见的 Z-up 世界系（X 向右、Y 向前、Z 向上），也可在面板中切回 OpenCV 首帧相机系（X 向右、Y 向下、Z 向前）；坐标系切换会同步影响 Canvas、截图和视频导出。截图直接取网页当前 Canvas，因此保留当前播放帧、GT/Pred 叠加或并排布局、旋转、缩放、平移以及「轨迹 / 相机姿态↔手」开关状态；并排模式会按页面当时的横排或竖排布局合成一张图。视频类面板直接抓取各自当前已解码帧。文件名包含样本、画面类型和零填充帧号。
-- **导出视频**：「导出」按钮与「开始推理」相邻，默认只选择原视频渲染和固定世界·3D；MuJoCo 与 Wuji Hand Retargeting 默认未选择且面板关闭，需手动开启面板后才会渲染并可加入导出。固定世界由服务端按主视频的 `0..T-1` 帧逐帧复刻 Canvas 动画，保留当前 GT/Pred 叠加或并排布局、视角旋转/缩放/平移以及「轨迹 / 相机姿态↔手」开关；世界轴和完整轨迹只预渲一次，每帧只更新动态骨架与相机姿态。MuJoCo 与 Retargeting 在面板显示后即自动预渲染，点击导出通常只需等待已有任务并复用缓存；独立画面仍由两个受限 EGL 上下文并发槽处理。Retargeting 的左右手时序 IK 各自保持 warm-start/filter，但两条序列并行解算，随后在单个合并场景中渲染；渲染帧与 ffmpeg H.264 写入使用有界队列流水重叠。网页机器人视频默认宽度为 `768`（`VIEWER_ROBOT_RENDER_WIDTH` 可覆盖），编码默认 `superfast`（`VIEWER_ROBOT_VIDEO_PRESET` 可覆盖），`VIEWER_ROBOT_ENCODE_BUFFER_FRAMES` 控制编码流水缓冲帧数。页面进度条按每一路的实际渲染帧数显示百分比和 `done/total`，最终显示合成阶段，完成后自动下载。一路直接下载原 MP4，多路由服务端 `ffmpeg` 合成；过程不依赖浏览器播放或 `MediaRecorder`，暂停、拖动和倍速不会影响导出帧序列。
+- **导出视频**：「导出」按钮与「开始推理」相邻，带 GT 的 LeRobot 对比默认选择原视频渲染、固定世界·3D、MuJoCo 和 Wuji Hand Retargeting 四类画面。MuJoCo 与 Retargeting 面板无需手动打开：导出任务会直接在服务端生成缺失视频。有 GT 时最终视频展开为两排八格：第一排为整体 2D `GT | PRED`、固定世界 3D `GT | PRED`，第二排为 MuJoCo `GT | PRED`、Wuji Retargeting `GT | PRED`。每一格都直接使用原视频宽高，不再固定为 `960×540`；例如 HOT3D 的 `512×512` 方形视频会得到八个相同的 `512×512` 方格，总分辨率 `2048×1024`。无 GT 时每类保持单个预测画面。固定世界由服务端按主视频的 `0..T-1` 帧逐帧复刻 Canvas 动画，保留当前视角与「轨迹 / 相机姿态↔手」开关；导出坐标轴使用低透明实线箭头并在正方向标注 `+X / +Y / +Z`。世界轴和完整轨迹只预渲一次，每帧只更新动态骨架与相机姿态。独立画面仍由两个受限 EGL 上下文并发槽处理。Retargeting 的左右手时序 IK 各自保持 warm-start/filter，但两条序列并行解算，随后在单个合并场景中渲染；渲染帧与 ffmpeg H.264 写入使用有界队列流水重叠。编码默认 `superfast`（`VIEWER_ROBOT_VIDEO_PRESET` 可覆盖），`VIEWER_ROBOT_ENCODE_BUFFER_FRAMES` 控制编码流水缓冲帧数。页面进度条按每一路的实际渲染帧数显示百分比和 `done/total`，最终显示合成阶段，完成后自动下载。过程不依赖浏览器播放或 `MediaRecorder`，暂停、拖动和倍速不会影响导出帧序列。
 ```bash
 $PY eval/model_effect/visualization/viewer_web.py \
     --input <lerobot_v3 目录> --ckpt <训练 step_* 目录> --port 8000
@@ -93,8 +93,12 @@ $PY eval/model_effect/visualization/viewer_web.py \
   页面「模型就绪」状态会显示实际加载的设备。`streaming` 相机有跨帧 KV cache，仍只在主卡执行。
 - 手部窗口模式有三种：`hard` 保留原始硬切，`blend` 使用最多 8 帧重叠做线性渐入/渐出，
   `smooth`（默认，页面显示「融合 + UKF平滑」）先执行同一套 `blend`，再复用
-  `ray_pipeline/data_cleaning/cleaning_modules/ukf_cam_smoothing.py` 最终生产参数的相机系
-  速度自适应 UKF + 无迹 RTS 双向平滑。默认参数为 `q=0.6, r=0.6, beta=2.0, rts=1`；处理
+  `ego_pipeline/data_cleaning/cleaning_modules/ukf_cam_smoothing.py` 最终生产参数的相机系
+  速度自适应 UKF + 无迹 RTS 双向平滑。生产兼容默认仍为 `q=0.6, r=0.6, beta=2.0, rts=1`；
+  Viewer 默认采用较弱的 `q=0.7, r=0.5, beta=0.3`，并在「手部拼窗」下允许输入三项参数。
+  建议范围为 `q=0.4–1.0, r=0.3–1.0, beta=0.2–3.0`（安全范围分别为 `0.1–2.0, 0.1–2.0, 0–5`）：
+  `q` 越大越跟手、平滑越弱，`r` / `beta` 越大则平滑越强。参数会进入预测与渲染缓存键。
+  UKF 处理
   `transl_cam`、腕部 quaternion、MANO pose rotvec 和 betas，最后把旋转转回模型的 6D 表示。
   模型输出本来就是相机系，因此这里不重复生产模块的 world→camera→world 外壳；只改写存在性有效帧，
   不改变 `hand_presence` 掩码。本后处理只移植生产清洗链的最终 `ukf_cam`，不会额外执行前置的

@@ -209,7 +209,7 @@ def _adopt_slam_cpu_prewarm(owner, weights: str) -> None:
     if net is None:
         return
     try:
-        from ray_pipeline.backends import megasam as _megasam
+        from ego_pipeline.backends import megasam as _megasam
         if weights not in _megasam._DROID_NET_CACHE:
             _megasam._DROID_NET_CPU_CACHE[weights] = net
         owner._slam_cpu_net = None
@@ -227,7 +227,7 @@ def ensure_slam_model_loaded(owner) -> None:
     print(f'[pipeline]  {gpu}.')
     weights = _slam_weights_path()
     cwd = os.getcwd()
-    from ray_pipeline.backends.megasam import _get_droid_net
+    from ego_pipeline.backends.megasam import _get_droid_net
     try:
         os.chdir(cwd)
     except Exception:
@@ -243,7 +243,7 @@ def offload_slam_model_cache(owner) -> None:
     """Move the cached DroidNet off GPU but keep it in process CPU cache."""
     gpu = getattr(owner, '_gpu', os.environ.get('CUDA_VISIBLE_DEVICES', '?'))
     try:
-        from ray_pipeline.backends.megasam import _DROID_NET_CACHE, _DROID_NET_CPU_CACHE
+        from ego_pipeline.backends.megasam import _DROID_NET_CACHE, _DROID_NET_CPU_CACHE
         for weights, net in list(_DROID_NET_CACHE.items()):
             move_to_cpu(net)
             _DROID_NET_CPU_CACHE[weights] = net
@@ -258,7 +258,7 @@ def cleanup_slam_model_cache(owner) -> None:
     """Release the process-local MegaSAM cache before this actor exits."""
     gpu = getattr(owner, '_gpu', os.environ.get('CUDA_VISIBLE_DEVICES', '?'))
     save_error: Exception | None = None
-    megasam_mod = sys.modules.get('ray_pipeline.backends.megasam')
+    megasam_mod = sys.modules.get('ego_pipeline.backends.megasam')
     if megasam_mod is not None:
         try:
             megasam_mod.wait_for_pending_saves()
@@ -296,7 +296,7 @@ def run_slam_item_once(
     delete_temp: bool = True,
 ) -> object | None:
     """Run exactly one SLAM item, for reversible idle stealing workers."""
-    from ray_pipeline.backends.hawor_no_filler import finalize_cam2world
+    from ego_pipeline.backends.hawor_no_filler import finalize_cam2world
     from steps.gpu.megasam import prefetch_megasam_alignment, run_megasam_step
 
     gpu = getattr(owner, '_gpu', os.environ.get('CUDA_VISIBLE_DEVICES', '?'))
@@ -451,7 +451,7 @@ def run_slam_loop(
     import concurrent.futures
     import threading
 
-    from ray_pipeline.backends.hawor_no_filler import finalize_cam2world
+    from ego_pipeline.backends.hawor_no_filler import finalize_cam2world
     from steps.gpu.megasam import prefetch_megasam_alignment, run_megasam_step
 
     gpu = getattr(owner, '_gpu', os.environ.get('CUDA_VISIBLE_DEVICES', '?'))

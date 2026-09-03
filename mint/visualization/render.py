@@ -62,8 +62,8 @@ def hands_to_world(hands: dict, camera_c2w: np.ndarray, average_shape: bool = Tr
     return output
 
 
-def presence_mask(prediction: dict, length: int) -> np.ndarray:
-    """Return a `[T, 2]` mask and keep both hands visible for legacy checkpoints."""
+def predicted_presence(prediction: dict, length: int) -> np.ndarray | None:
+    """Return thresholded left/right presence predictions when available."""
     if prediction.get("hand_presence_logits") is not None:
         values = np.asarray(prediction["hand_presence_logits"], dtype=np.float32)
         threshold = 0.0
@@ -71,8 +71,14 @@ def presence_mask(prediction: dict, length: int) -> np.ndarray:
         values = np.asarray(prediction["hand_confidence"], dtype=np.float32)
         threshold = 0.5
     else:
-        return np.ones((length, 2), dtype=bool)
-    return values >= threshold if values.shape == (length, 2) else np.ones((length, 2), dtype=bool)
+        return None
+    return values >= threshold if values.shape == (length, 2) else None
+
+
+def presence_mask(prediction: dict, length: int) -> np.ndarray:
+    """Return the draw mask, keeping both hands visible for legacy checkpoints."""
+    presence = predicted_presence(prediction, length)
+    return presence if presence is not None else np.ones((length, 2), dtype=bool)
 
 
 def prepare_scene(frames_rgb: np.ndarray, prediction: dict) -> tuple[np.ndarray, np.ndarray, dict, np.ndarray]:
@@ -96,11 +102,13 @@ def render_prediction(
     mode: str = "mesh_skel",
     alpha: float = 0.62,
     progress=None,
+    label_text: str = "MINT / PREDICTION",
 ) -> Path:
     """Render a single prediction overlay without loading or displaying ground truth."""
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
     camera_c2w, camera_k, world, visible = prepare_scene(frames_rgb, prediction)
+    presence = predicted_presence(prediction, len(frames_rgb))
     faces_right, faces_left = draw.get_faces()
     faces = (faces_left, faces_right)
     frame_count, height, width = frames_rgb.shape[:3]
@@ -119,7 +127,14 @@ def render_prediction(
             rendered = draw.render_frame(
                 frame_bgr, camera_c2w[index], camera_k, sides, faces, mode=mode, alpha=alpha
             )
-            draw.label(rendered, "MINT / PREDICTION")
+            draw.label(rendered, label_text)
+            if presence is None:
+                left_present, right_present = None, None
+            else:
+                left_present, right_present = map(bool, presence[index])
+            draw.presence_label(
+                rendered, [("", left_present, right_present)]
+            )
             writer.write(rendered)
             if progress is not None:
                 progress(index + 1, frame_count)
@@ -146,4 +161,3 @@ def trajectory_payload(frames_rgb: np.ndarray, prediction: dict, max_points: int
         "left_visible": visible[indices, 0].tolist(),
         "right_visible": visible[indices, 1].tolist(),
     }
-

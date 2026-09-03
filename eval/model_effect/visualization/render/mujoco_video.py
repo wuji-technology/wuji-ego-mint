@@ -3,8 +3,8 @@
 """Reusable MuJoCo MP4 renderer for the web viewer.
 
 The standalone ``mujoco_view.py`` remains the feature-rich CLI. This module
-extracts its ego-camera render path into a data-source-independent function so
-the Flask viewer can compare MuJoCo output directly against the source video.
+extracts its render path into a data-source-independent function. The web viewer
+uses a fixed third-person camera fitted to the complete motion by default.
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from pathlib import Path
 import numpy as np
 
 
-_WEB_FLOOR_CLEARANCE = 0.85
+_WEB_FLOOR_CLEARANCE = 0.08
 _ROBOT_VIDEO_PRESET = os.environ.get("VIEWER_ROBOT_VIDEO_PRESET", "superfast")
 
 try:
@@ -80,7 +80,14 @@ def _gravity_axis(cam_c2w: np.ndarray, hand_points: np.ndarray) -> np.ndarray:
 
 
 def _upright_rotation(cam_c2w: np.ndarray, hand_points: np.ndarray) -> np.ndarray:
-    return _rot_align(_gravity_axis(cam_c2w, hand_points), np.array([0.0, 0.0, 1.0]))
+    # 与 Wuji renderer 的 _gravity_up 同口径：用全段相机 +Y(下)平均值的反向。
+    down = np.asarray(cam_c2w, dtype=np.float64)[:, :3, 1]
+    down = down[np.all(np.isfinite(down), axis=1)]
+    if len(down) and float(np.linalg.norm(down.mean(axis=0))) >= 1e-6:
+        up = -down.mean(axis=0)
+    else:
+        up = _gravity_axis(cam_c2w, hand_points)
+    return _rot_align(up, np.array([0.0, 0.0, 1.0]))
 
 
 def render_world_video(world: dict, cam_c2w: np.ndarray, kept: np.ndarray,
@@ -88,9 +95,10 @@ def render_world_video(world: dict, cam_c2w: np.ndarray, kept: np.ndarray,
                        intrinsics: np.ndarray | None = None,
                        image_size: tuple[int, int] | None = None,
                        width: int = 960, height: int | None = None,
-                       view: str = "ego",
+                       view: str = "third",
+                       label_text: str | None = None,
                        on_step=None) -> Path:
-    """Render one GT or prediction from its source-video camera viewpoint."""
+    """Render one GT or prediction from a fixed full-motion third-person view."""
     from . import draw, mujoco_scene
 
     output = Path(output)
@@ -138,23 +146,14 @@ def render_world_video(world: dict, cam_c2w: np.ndarray, kept: np.ndarray,
         copied["left"]["joints"].reshape(-1, 3),
         copied["right"]["joints"].reshape(-1, 3),
     ], axis=0)
-    upright = _upright_rotation(cameras, hand_points)
+    upright, origin, cameras = mujoco_scene.canonicalize_robot_coordinates(
+        cameras, hand_points)
     for side in ("left", "right"):
         copied[side]["verts"] = copied[side]["verts"] @ upright.T
         copied[side]["joints"] = copied[side]["joints"] @ upright.T
-    cameras[:, :3, :3] = upright[None] @ cameras[:, :3, :3]
-    cameras[:, :3, 3] = cameras[:, :3, 3] @ upright.T
-
-    rotated_points = np.concatenate([
-        copied["left"]["joints"].reshape(-1, 3),
-        copied["right"]["joints"].reshape(-1, 3),
-    ], axis=0)
-    rotated_points = rotated_points[np.all(np.isfinite(rotated_points), axis=1)]
-    origin = np.median(rotated_points, axis=0) if len(rotated_points) else np.zeros(3)
     for side in ("left", "right"):
         copied[side]["verts"] -= origin
         copied[side]["joints"] -= origin
-    cameras[:, :3, 3] -= origin
 
     vertices_left = copied["left"]["verts"]
     vertices_right = copied["right"]["verts"]
@@ -168,14 +167,17 @@ def render_world_video(world: dict, cam_c2w: np.ndarray, kept: np.ndarray,
     )
     writer = None
     try:
-        valid_vertices = []
-        if validity[:, 0].any():
-            valid_vertices.append(vertices_left[validity[:, 0]].reshape(-1, 3))
-        if validity[:, 1].any():
-            valid_vertices.append(vertices_right[validity[:, 1]].reshape(-1, 3))
-        floor_points = (np.concatenate(valid_vertices, axis=0) if valid_vertices
-                        else np.concatenate([vertices_left, vertices_right], axis=1).reshape(-1, 3))
-        floor_points = floor_points[np.all(np.isfinite(floor_points), axis=1)]
+        fit_parts = []
+        for hand_index, side in enumerate(("left", "right")):
+            if validity[:, hand_index].any():
+                fit_parts.append(
+                    copied[side]["joints"][validity[:, hand_index]].reshape(-1, 3))
+        hand_finite = (np.concatenate(fit_parts, axis=0) if fit_parts else
+                       np.concatenate([
+                           copied["left"]["joints"].reshape(-1, 3),
+                           copied["right"]["joints"].reshape(-1, 3),
+                       ], axis=0))
+        hand_finite = hand_finite[np.all(np.isfinite(hand_finite), axis=1)]
 
         forward = cameras[:, :3, 2]
         forward = forward[np.all(np.isfinite(forward), axis=1)]
@@ -184,31 +186,20 @@ def render_world_video(world: dict, cam_c2w: np.ndarray, kept: np.ndarray,
         forward_azimuth = (float(np.arctan2(forward_xy[1], forward_xy[0]))
                            if np.linalg.norm(forward_xy) > 1e-6 else 0.0)
         # Web 画面不放桌面/操作垫；地面固定为世界 XY 水平面，并与手留出距离。
-        scene.place_floor(floor_points, margin=_WEB_FLOOR_CLEARANCE, fwd_az=None)
-
-        camera_points = cameras[:, :3, 3]
-        camera_points = camera_points[np.all(np.isfinite(camera_points), axis=1)]
-        hand_finite = floor_points[np.all(np.isfinite(floor_points), axis=1)]
-        mat_center, mat_half = scene._mat_center, scene._mat_half
-        mat_corners = np.array([
-            [mat_center[0] + sx * mat_half[0], mat_center[1] + sy * mat_half[1], mat_center[2]]
-            for sx in (-1, 1) for sy in (-1, 1)
-        ])
-        key_points = np.concatenate([
-            np.percentile(hand_finite, [1, 99], axis=0),
-            np.percentile(camera_points, [1, 99], axis=0),
-            mat_corners,
-        ], axis=0)
-        low, high = key_points.min(0), key_points.max(0)
-        fit = np.array([[x, y, z] for x in (low[0], high[0])
-                        for y in (low[1], high[1]) for z in (low[2], high[2])])
-        look_at = (low + high) / 2.0
-        look_at[2] = float(hand_finite[:, 2].mean()) * 0.55 + float(camera_points[:, 2].mean()) * 0.45
-        scene.autofit_camera(fit, azimuth=140.0, elevation=-22.0,
-                             lookat=look_at, margin=1.25)
+        # Use hands for the contact height, but include the full camera path
+        # when sizing the shared ground so MuJoCo and Wuji show the same extent.
+        scene.place_floor(
+            hand_finite, margin=_WEB_FLOOR_CLEARANCE, fwd_az=None,
+            extent_points=np.concatenate([
+                hand_finite,
+                cameras[:, :3, 3][np.all(np.isfinite(cameras[:, :3, 3]), axis=1)],
+            ], axis=0))
+        scene.fit_fixed_third_camera(
+            np.asarray([0.0, 0.0, 1.0]), hand_finite, cameras)
 
         base = float(np.degrees(forward_azimuth))
         views = {
+            "third": (base + 205.0, -22.0),
             "front": (base + 180.0, -22.0),
             "back": (base, -22.0),
             "right": (base + 90.0, -22.0),
@@ -228,6 +219,10 @@ def render_world_video(world: dict, cam_c2w: np.ndarray, kept: np.ndarray,
             output, float(fps), (render_width, render_height),
             preset=_ROBOT_VIDEO_PRESET,
             buffered_frames=_ENCODE_BUFFER_FRAMES)
+        if view != "ego":
+            # The web renderer uses one fixed ground pose for the whole clip.
+            # Avoid restoring it and running mj_forward again on every frame.
+            scene.set_floor_ground()
         for frame in range(frames):
             scene.bake_frame(
                 vertices_left[frame], vertices_right[frame],
@@ -238,10 +233,15 @@ def render_world_video(world: dict, cam_c2w: np.ndarray, kept: np.ndarray,
                 scene.set_floor_ego_ground(cameras[frame], fovy_deg)
                 scene.set_ego(cameras[frame], fovy_deg)
                 image = scene.render_ego(K, source_size)
+            elif view == "third":
+                image = scene.render_fixed_third(frame)
             else:
-                scene.set_floor_ground()
-                image = scene.render_free(azimuth, elevation, cameras, frame)
-            writer.write(np.ascontiguousarray(image[:, :, ::-1]))
+                image = scene.render_free(
+                    azimuth, elevation, None, frame, draw_trail=False)
+            image_bgr = np.ascontiguousarray(image[:, :, ::-1])
+            if label_text:
+                draw.label(image_bgr, str(label_text))
+            writer.write(image_bgr)
             if on_step is not None:
                 on_step(frame + 1, frames)
         writer.close()

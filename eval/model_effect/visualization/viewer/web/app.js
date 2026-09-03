@@ -6,7 +6,7 @@ const PERSISTENT_PANELS = Object.fromEntries(
 
 // 3D 坐标轴颜色图例（与 renderScene 画的三轴一致）：X红 / Y绿 / Z蓝。
 const AXES = '<span class="axkey">轴 <b style="color:#ff6b6b">X</b> <b style="color:#51cf66">Y</b> <b style="color:#5c9dff">Z</b></span>';
-// 2D 展示端到端 GT vs Pred；3D 同时保留固定世界整体运动与当前相机系手部。
+// 2D 展示端到端 GT vs PRED；3D 同时保留固定世界整体运动与当前相机系手部。
 const PANELS = [
   {id:'both_2d', name:'整体·2D',     kind:'video', content:'both'},
   {id:'world_motion_3d', name:'固定世界·3D', kind:'scene', content:'worldmotion'},
@@ -38,8 +38,8 @@ const FRAME_CAPTURE_SOURCES = [
   {id:'mujoco_3d', label:'MuJoCo · 仿真', file:'mujoco_3d'},
   {id:'wuji_retarget_3d', label:'Wuji Hand · Retargeting', file:'wuji_retarget_3d'},
 ];
-const MUJOCO_RENDER_TAG = 'ego_grid_v5';
-const RETARGET_RENDER_TAG = 'wuji_ground_v2';
+const MUJOCO_RENDER_TAG = 'shared_wuji_camera_v13_canonical_origin';
+const RETARGET_RENDER_TAG = 'shared_wuji_camera_v13_no_presence_hud';
 // 固定世界默认 3/4 俯视（弧度）：正对首帧相机光轴的正视图读不出纵深。
 // 与 render/fixed_world_video.py 的 DEFAULT_AZ/DEFAULT_EL 必须一致，否则网页与导出视频不同视角。
 const VIEW_AZ0 = -0.61, VIEW_EL0 = 0.31;
@@ -57,10 +57,12 @@ let state = { eid:0, fps:30, mode:'mesh_skel', nframes:1,
               camMode:'max_chunked',                 // chunked / max_chunked / streaming / exact full
               fullMaxFrames:null,                    // 模型加载后由后端返回当前主卡的 exact full 安全上限
               handMode:'smooth',                     // hard / blend / smooth(blend + UKF/RTS 后处理)
+              ukf:{q:0.7,r:0.5,beta:0.3},            // 轻于生产默认 0.6/0.6/2.0；仅 smooth 生效
               gtBetas:'per_frame', predBetas:'per_frame', predFov:'per_frame',  // 手形/内参 每帧 vs 整段平均
               gt:null, pred:null, metrics:null, metricsError:null, nums:null,
                                                         // nums=逐帧数值(每块下方面板)
-              layout:'overlay',                      // 'overlay'(默认) | 'side'
+              layout:'side',                         // 生效布局：'side'(默认，GT/PRED 左右并排) | 'overlay'(同画面叠加)
+              layoutPref:'side',                     // 用户点选的布局偏好；裸视频被迫 overlay 时不改它
               order:DEFAULT_ORDER.slice(),           // 模块显示顺序（右侧调节栏拖拽可改）
               hidden:new Set(['mujoco_3d','wuji_retarget_3d','batch','bench','logdiff']),
                                                         // 仿真/重定向与工具面板均按需打开
@@ -68,10 +70,12 @@ let state = { eid:0, fps:30, mode:'mesh_skel', nframes:1,
               worldCoordMode:'z_up',                 // 固定世界默认 X右 / Y前 / Z上；可切回 OpenCV
               views:{},                              // 模块 id -> {vov,vgt,vpred}（跨重建保留视角）
               panels:{},                             // 模块 id -> panel obj
-              exportSelection:new Set(['both_2d','world_motion_3d']),
+              exportSelection:new Set([
+                'both_2d','world_motion_3d','mujoco_3d','wuji_retarget_3d',
+              ]),
               exporting:false, exportProgress:0,
               capturingFrame:false, frameCaptureMessage:'',
-              comparisonSnapshot:null,               // 进入仅原始 GT 前保存当前 GT/Pred 对照，供再次点击恢复
+              comparisonSnapshot:null,               // 进入仅原始 GT 前保存当前 GT/PRED 对照，供再次点击恢复
               no_truth:false,                        // 无真值裸视频模式（仅预测，无 GT/loss）
               rawOnly:false,                         // 仅原始 GT（不跑推理，只看原数据）
               vidName:null, epIdx:null, epOrdinal:null, epTotal:null, sourceName:null, sourcePath:null,
@@ -112,6 +116,12 @@ async function getJSON(u){ const r = await fetch(U(u)); if(!r.ok) throw new Erro
 
 let EP_TOTAL = 0, CKPT_TAG = '';
 const clampEp = v => EP_TOTAL ? Math.min(EP_TOTAL-1, Math.max(0, Math.floor(+v||0))) : 0;
+function effectiveHandMode(){
+  if(state.handMode!=='smooth') return state.handMode;
+  const fmt=value=>Number(value).toFixed(6).replace(/0+$/,'').replace(/\.$/,'');
+  return `smooth@${fmt(state.ukf.q)},${fmt(state.ukf.r)},${fmt(state.ukf.beta)}`;
+}
+function appendHandMode(params){ params.set('hand_mode',effectiveHandMode()); return params; }
 function syncFullLimit(value){
   const limit = Math.max(0, Math.floor(+value||0));
   if(limit) state.fullMaxFrames = limit;
@@ -173,7 +183,7 @@ function updateLoadBtn(){
     btn.title = state.modelReady ? '显式运行当前输入和设置；其他选择操作不会自动推理'
                                  : '请先点 [⬇ 加载模型] 载入模型后再推理';
   }
-  for(const id of ['#camMode','#gtBetas','#predBetas','#predFov']){
+  for(const id of ['#camMode','#gtBetas','#predBetas','#predFov','#ukfQ','#ukfR','#ukfBeta']){
     const el=$(id); if(el) el.disabled=state.loading;
   }
   document.querySelectorAll('#handModeSeg button').forEach(el=>{ el.disabled=state.loading; });
@@ -205,10 +215,10 @@ let ckptCur = '';
 let curDatasetRel = null;     // 当前浏览目录若是 lerobot 数据集则记其**绝对**路径，否则 null（普通目录=视频项）
 let _dsScanToken = 0;         // 数据集枚举轮询代次：每次进目录 +1，失效上一目录仍在跑的轮询（防旧进度回填）
 
-// 按当前加载/选择项切换「模式相关」UI：无真值(裸视频)隐藏 布局/说明/仅看原始，固定 overlay；有真值全开。
+// 按当前加载/选择项切换「模式相关」UI：无真值(裸视频)隐藏 布局/说明/仅看原始，固定 overlay；有真值全开并恢复偏好。
 function applyModeUI(nt){
   state.no_truth = nt;
-  if(nt) state.layout = 'overlay';
+  state.layout = nt ? 'overlay' : state.layoutPref;
   const rawButton=$('#loadRawBtn'); if(rawButton) rawButton.style.display=nt?'none':'';
   const mw = $('#metricsWrap'); if(mw && nt) mw.style.display = 'none';   // 无真值无 loss；有真值时 loadEpisode 里按需显隐
 }
@@ -444,9 +454,13 @@ async function init(){
     queueInference('相机推理模式已改为「'+camModeSel.options[camModeSel.selectedIndex].text+'」，点击 [▶ 开始推理] 应用'); };
   // 手部拼窗/后处理模式：hard、blend、blend 后生产 UKF+RTS 平滑分别独立缓存。
   state.handMode = meta.default_hand_mode || 'smooth';
+  state.ukf = {...state.ukf,...(meta.default_ukf_params||{})};
   const handModeBtns = document.querySelectorAll('#handModeSeg [data-hand-mode]');
-  const syncHandMode = ()=> handModeBtns.forEach(
-    btn => btn.classList.toggle('on', btn.dataset.handMode === state.handMode));
+  const ukfControls=$('#ukfControls');
+  const syncHandMode = ()=>{
+    handModeBtns.forEach(btn => btn.classList.toggle('on', btn.dataset.handMode === state.handMode));
+    if(ukfControls) ukfControls.hidden=state.handMode!=='smooth';
+  };
   syncHandMode();
   handModeBtns.forEach(btn => btn.onclick = ()=>{
     const next = btn.dataset.handMode;
@@ -454,6 +468,18 @@ async function init(){
     state.handMode = next; syncHandMode(); console.log('[btn] 手部拼窗 → '+state.handMode);
     queueInference('手部拼窗模式已更新，点击 [▶ 开始推理] 应用');
   });
+  const ukfFields=[['#ukfQ','q',0.1,2],['#ukfR','r',0.1,2],['#ukfBeta','beta',0,5]];
+  for(const [selector,key,minimum,maximum] of ukfFields){
+    const input=$(selector); if(!input) continue;
+    input.value=String(state.ukf[key]);
+    input.onchange=()=>{
+      const parsed=Number(input.value);
+      const value=Number.isFinite(parsed)?Math.max(minimum,Math.min(maximum,parsed)):state.ukf[key];
+      state.ukf[key]=Math.round(value*1000)/1000; input.value=String(state.ukf[key]);
+      console.log(`[btn] UKF ${key} → ${state.ukf[key]}`);
+      queueInference(`UKF ${key} 已改为 ${state.ukf[key]}，点击 [▶ 开始推理] 应用`);
+    };
+  }
   // 手形/内参 每帧 vs 平均：只记录选项，不自动加载、不自动推理。
   const _pdef = meta.default_param_mode || 'per_frame';
   for(const [id, key] of [['#gtBetas','gtBetas'],['#predBetas','predBetas'],['#predFov','predFov']]){
@@ -468,7 +494,7 @@ async function init(){
   $('#mujocoBtn').onclick = toggleMujocoPanel;
   $('#retargetBtn').onclick = toggleRetargetPanel;
   wireFrameCapturePicker();
-  $('#exportBtn').onclick = exportVideo;
+  $('#exportBtn').onclick = ()=>exportVideo('grid');
   wireExportPicker();
   updateExportButton();
   updateLoadBtn();                           // 首屏：未加载 → 禁用「推理」、放开「加载模型」
@@ -549,7 +575,7 @@ function onLoadClick(){
   resolveEid().then(eid => loadEpisode(eid, {explicitInference:true}))
     .catch(e => { info.textContent = '定位失败：' + (e && e.message || e); });
 }
-// 「仅看原始 GT」双向切换：进入前保存当前 GT/Pred；再次点击直接恢复，不重新跑模型。
+// 「仅看原始 GT」双向切换：进入前保存当前 GT/PRED；再次点击直接恢复，不重新跑模型。
 function onLoadRawClick(){
   if(state.loading){                                   // 加载中不响应（用主按钮停止后再点）
     console.log('[btn] 「仅看原始(GT)」被忽略：正在加载中 eid='+state.eid+'，请先点「停止」');
@@ -569,7 +595,7 @@ function onLoadRawClick(){
     const metrics=$('#metricsWrap'); if(metrics) metrics.style.display='';
     setStep('✓ 已返回 GT 对照','ok');
     buildPanels(false); requestDraw();
-    console.log('[btn] 返回 GT/Pred 对照（复用已有结果）');
+    console.log('[btn] 返回 GT/PRED 对照（复用已有结果）');
     return;
   }
   if(state.loaded&&state.pred){
@@ -615,7 +641,7 @@ async function loadEpisode(eid, {explicitInference=false}={}){
     // raw=1 → 仅 GT；否则带推理/手部模式和手形/内参参数，后端分别缓存。
     const pq = `&gt_betas=${state.gtBetas}&pred_betas=${state.predBetas}&pred_fov=${state.predFov}`;
     const wq = state.rawOnly ? '?raw=1' :
-      (`?cam_mode=${encodeURIComponent(state.camMode)}&hand_mode=${encodeURIComponent(state.handMode)}${pq}`);
+      (`?cam_mode=${encodeURIComponent(state.camMode)}&hand_mode=${encodeURIComponent(effectiveHandMode())}${pq}`);
     const r = await fetch(U('/api/world/'+eid + wq));
     if(r.status === 409){ state.stopped = true; state.cancelling = false;
       info.textContent = '已停止'; setStep('■ 已停止', 'err'); }
@@ -713,15 +739,21 @@ function _wireServerVideoPanel(pan,badge,{autoStart=true}={}){
     pan.renderDone=true; pan.renderStarted=false; pan.failed=false;
     pan.autoLoadFailed=false; badge.classList.remove('rendering','error');
     badge.style.display='none'; badge.style.pointerEvents='none';
+    if(pan.onStatusChange) pan.onStatusChange();
     syncMujocoVideos(true); updateExportButton();
   };
-  video.addEventListener('loadedmetadata',()=>{ pan.renderDone=true; updateExportButton(); });
+  video.addEventListener('loadedmetadata',()=>{
+    pan.renderDone=true;
+    if(pan.onStatusChange) pan.onStatusChange();
+    updateExportButton();
+  });
   video.addEventListener('loadeddata',onMediaReady);
   video.addEventListener('canplay',onMediaReady);
   video.addEventListener('error',()=>{
     pan.failed=true; pan.renderStarted=false; pan.loadRequested=false;
     pan.autoLoadFailed=true;
     _manualRenderBadge(pan,badge,`${pan.label}视频加载或渲染失败`,'重试渲染');
+    if(pan.onStatusChange) pan.onStatusChange();
     updateExportButton();
   });
 
@@ -748,10 +780,12 @@ function _wireServerVideoPanel(pan,badge,{autoStart=true}={}){
     if(progress.stage==='error'){
       pan.failed=true; pan.renderStarted=false; pan.loadRequested=false;
       _manualRenderBadge(pan,badge,`${pan.label}渲染失败：${progress.error||'未知错误'}`,'重试渲染');
+      if(pan.onStatusChange) pan.onStatusChange();
     }else if(progress.stage==='done'){
       pan.renderDone=true; pan.renderStarted=false; pan.failed=false;
       badge.classList.remove('rendering','error');
       if(!_mediaFrameReady(video)&&!pan.autoLoadFailed) _loadServerVideo(pan,badge,false);
+      if(pan.onStatusChange) pan.onStatusChange();
       updateExportButton();
     }else if(total>0||progress.stage==='render'||progress.stage==='retarget'||progress.stage==='queued'){
       pan.renderStarted=true; pan.failed=false;
@@ -766,7 +800,7 @@ function _wireServerVideoPanel(pan,badge,{autoStart=true}={}){
     }
   };
   (async()=>{
-    while(state.panels[pan.id]===pan){
+    while(!pan.isActive||pan.isActive()){
       try{
         const progress=await getJSON(pan.progressUrl);
         pan.showRenderProgress(progress);
@@ -791,7 +825,7 @@ function _syncExportPanelProgress(sources){
 
 function _worldRenderQuery(){
   const params=new URLSearchParams({
-    layout:state.layout, cam_mode:state.camMode, hand_mode:state.handMode,
+    layout:state.layout, cam_mode:state.camMode, hand_mode:effectiveHandMode(),
     gt_betas:state.gtBetas, pred_betas:state.predBetas, pred_fov:state.predFov,
     coord_mode:state.worldCoordMode,
     show_traj:state.showTraj?'1':'0', show_cam_hand:state.showCamHand?'1':'0',
@@ -822,7 +856,7 @@ function _invalidateWorldVideo(pan){
 }
 
 // 按 state.order（跳过 hidden）渲染各模块。隐藏的机器人面板不会创建视频或请求渲染；
-// 手动开启后，MuJoCo 与 Wuji Hand 固定并排，并等待整体·2D先完成。
+// 手动开启后，每种机器人方法各占一栏；有 GT 时栏内显示 GT | PRED，并等待整体·2D先完成。
 // preserveTime：尽量保留主视频进度。渲染后同步右侧顺序调节栏。
 function buildPanels(preserveTime){
   const cont = $('#blocks');
@@ -848,19 +882,8 @@ function buildPanels(preserveTime){
     if(primary2DSettled) return;
     primary2DSettled=true; resolvePrimary2D();
   };
-  const primarySceneIds = new Set(['mujoco_3d','wuji_retarget_3d']);
-  const pairPrimaryScenes = loaded && primarySceneIds.size===2
-    && [...primarySceneIds].every(id=>!state.hidden.has(id));
-  let primarySceneRow = null;
   const appendPanel = (sec,id)=>{
-    if(!pairPrimaryScenes || !primarySceneIds.has(id)){ cont.appendChild(sec); return; }
-    if(!primarySceneRow){
-      primarySceneRow=document.createElement('div');
-      primarySceneRow.className='primary-scene-row';
-      cont.appendChild(primarySceneRow);
-    }
-    sec.classList.add('primary-scene-panel');
-    primarySceneRow.appendChild(sec);
+    cont.appendChild(sec);
   };
   for(const id of state.order){
     if(state.hidden.has(id)) continue;
@@ -870,7 +893,7 @@ function buildPanels(preserveTime){
     const sec = document.createElement('section'); sec.className='panel'; sec.dataset.pid=id;
     if(P.kind==='video'){
       const comparisonTools=!state.no_truth&&!state.rawOnly ? `<span id="layoutWrap" class="tool-field gt-layout-controls"><label>GT 对照</label><span class="seg" id="layoutSeg">
-        <button data-layout="overlay" class="${state.layout==='overlay'?'on':''}" title="在同一画面叠加 GT 与 Pred">GT/Pred 叠加</button><button data-layout="side" class="${state.layout==='side'?'on':''}" title="把 GT 与 Pred 分成左右画面">GT/Pred 并排</button></span></span>` : '';
+        <button data-layout="overlay" class="${state.layout==='overlay'?'on':''}" title="在同一画面叠加 GT 与 PRED">GT/PRED 叠加</button><button data-layout="side" class="${state.layout==='side'?'on':''}" title="把 GT 与 PRED 分成左右画面">GT/PRED 并排</button></span></span>` : '';
       sec.innerHTML = `<div class="btitle"><b class="k">${P.name}</b>${comparisonTools}</div>
         <div class="vwrap"><video class="v2d" preload="auto"></video><div class="vbadge">2D 渲染中…</div></div>`;
       wireLayoutControls(sec);
@@ -889,9 +912,9 @@ function buildPanels(preserveTime){
       pan.video.controls = true;
       const rawq = state.rawOnly ? '&raw=1' : '';
       const camq = state.rawOnly ? '' :
-        `&cam_mode=${encodeURIComponent(state.camMode)}&hand_mode=${encodeURIComponent(state.handMode)}&gt_betas=${state.gtBetas}&pred_betas=${state.predBetas}&pred_fov=${state.predFov}`;
+        `&cam_mode=${encodeURIComponent(state.camMode)}&hand_mode=${encodeURIComponent(effectiveHandMode())}&gt_betas=${state.gtBetas}&pred_betas=${state.predBetas}&pred_fov=${state.predFov}`;
       const bust = state.rawOnly ? 'gt'
-        : encodeURIComponent((CKPT_TAG||'x')+':'+state.camMode+':'+state.handMode+':'+state.gtBetas+state.predBetas+state.predFov);
+        : encodeURIComponent((CKPT_TAG||'x')+':'+state.camMode+':'+effectiveHandMode()+':'+state.gtBetas+state.predBetas+state.predFov);
       const vq = `mode=${encodeURIComponent(state.mode)}&layout=${state.layout}&content=${P.content}${rawq}${camq}`;
       pan.video.src = U(`/video/${state.eid}?${vq}&_=${bust}`);
       pan.video.load();
@@ -913,9 +936,9 @@ function buildPanels(preserveTime){
       vids.push(pan.video);
     } else if(P.kind==='scene'){
       if(!state.views[id]) state.views[id] = {vov:newView(), vgt:newView(), vpred:newView()};
-      const cap = P.content==='hand' ? '逐帧当前相机系；GT手×GT相机，Pred手×Pred相机'
+      const cap = P.content==='hand' ? '逐帧当前相机系；GT手×GT相机，PRED手×PRED相机'
         : (P.content==='camworld' ? '相机轨迹+世界轴(首帧对齐)'
-        : (P.content==='worldmotion' ? '固定世界；GT=红绿蓝，Pred=橙黄紫；左键平移，Ctrl+左键旋转' : '世界系整体'));
+        : (P.content==='worldmotion' ? '固定世界；GT=红绿蓝，PRED=橙黄紫；左键平移，Ctrl+左键旋转' : '世界系整体'));
       const axesKey = AXES;
       const worldTools = P.content==='worldmotion' ? `<span class="scene-local">
         <label>坐标</label><span class="seg world-coord-controls">
@@ -929,7 +952,7 @@ function buildPanels(preserveTime){
       sec.innerHTML = `<div class="btitle"><b class="k">${P.name}</b> <span class="sub">${cap} ${axesKey}</span>${worldTools}</div>`
         + (ov ? `<div class="ov3d"><div class="chart"><canvas class="world cov"></canvas></div></div>`
               : `<div class="worlds"><div class="chart"><span class="cap">GT</span><canvas class="world cgt"></canvas></div>`
-                + `<div class="chart"><span class="cap">Pred</span><canvas class="world cpred"></canvas></div></div>`);
+                + `<div class="chart"><span class="cap">PRED</span><canvas class="world cpred"></canvas></div></div>`);
       appendPanel(sec,id);
       const pan = { id, kind:'scene', content:P.content, v:state.views[id], renderDone:false,
                     cOV:sec.querySelector('.cov'), cGT:sec.querySelector('.cgt'), cPred:sec.querySelector('.cpred') };
@@ -956,49 +979,55 @@ function buildPanels(preserveTime){
           _invalidateWorldVideo(pan); requestDraw(); console.log('[btn] 固定世界相机↔手 → '+state.showCamHand); };
         _checkWorldVideoCache(pan);
       }
-    } else if(P.kind==='mujoco'){
-      const source=state.rawOnly?'gt':'pred';
-      const betas=state.rawOnly?state.gtBetas:state.predBetas;
-      const fov=state.rawOnly?'per_frame':state.predFov;
-      const mq=`source=${source}&cam_mode=${encodeURIComponent(state.camMode)}&hand_mode=${encodeURIComponent(state.handMode)}&betas=${betas}&fov=${fov}`;
-      sec.innerHTML=`<div class="btitle"><b class="k">${P.name}</b><span class="sub">${source==='gt'?'GT':'Pred'} · 视频相机视角 · 外参与内参对齐整体·2D</span></div>
-        <div class="vwrap mujoco-wrap"><video class="mujoco-video" preload="metadata" muted playsinline></video><div class="vbadge">MuJoCo 正在自动渲染…</div></div>`;
+    } else if(P.kind==='mujoco'||P.kind==='retarget'){
+      const isMujoco=P.kind==='mujoco';
+      const methodLabel=isMujoco?'MuJoCo':'Wuji Hand';
+      const endpoint=isMujoco?'mujoco':'retarget';
+      const renderTag=isMujoco?MUJOCO_RENDER_TAG:RETARGET_RENDER_TAG;
+      const videoClass=isMujoco?'mujoco-video':'retarget-video';
+      const compare=!state.no_truth&&!state.rawOnly;
+      const sources=compare?['gt','pred']:[state.rawOnly?'gt':'pred'];
+      const lead=compare?'GT vs PRED':(sources[0]==='gt'?'GT':'PRED');
+      const methodDetail=isMujoco?'共用 Wuji 固定视角':'21点重定向 · 共用 Wuji 固定视角';
+      const cells=sources.map(source=>`<div class="robot-video-cell" data-robot-source="${source}">
+        <span class="robot-video-label">${source.toUpperCase()}</span>
+        <div class="vwrap mujoco-wrap"><video class="${videoClass}" preload="metadata" muted playsinline></video><div class="vbadge">${methodLabel} ${source.toUpperCase()} 正在自动渲染…</div></div></div>`).join('');
+      sec.innerHTML=`<div class="btitle"><b class="k">${P.name}</b><span class="sub">${lead} · ${methodDetail} · 起点框 + 实时相机框</span></div>
+        <div class="robot-comparison-grid${compare?' is-comparison':''}">${cells}</div>`;
       appendPanel(sec,id);
-      const video=sec.querySelector('.mujoco-video'), badge=sec.querySelector('.vbadge');
-      const mujocoBust=`${source==='gt'?'gt':CKPT_TAG}:${MUJOCO_RENDER_TAG}`;
-      const pan={id,kind:'mujoco',video,source,label:'MuJoCo',renderDone:false,
-        renderStarted:false,loadRequested:false,failed:false,
-        videoUrl:U(`/mujoco/${state.eid}?${mq}&_=${encodeURIComponent(mujocoBust)}`),
-        progressUrl:`/api/mujoco/progress/${state.eid}?${mq}`};
-      video.controls=false; video.disablePictureInPicture=true; video.tabIndex=-1;
-      video.classList.add('synced-follower-video');
-      video.setAttribute('controlsList','nodownload nofullscreen noremoteplayback noplaybackrate');
-      video.setAttribute('aria-label','MuJoCo video synchronized with the overall 2D video');
-      state.panels[id]=pan;
-      _wireServerVideoPanel(pan,badge,{autoStart:false});
-      deferredRobotPanels.push(pan);
-      if(preserveTime&&t>0) video.addEventListener('loadedmetadata',()=>{ try{video.currentTime=Math.min(t,video.duration||t);}catch(e){} },{once:true});
-    } else if(P.kind==='retarget'){
-      const source=state.rawOnly?'gt':'pred';
-      const betas=state.rawOnly?state.gtBetas:state.predBetas;
-      const fov=state.rawOnly?'per_frame':state.predFov;
-      const rq=`source=${source}&cam_mode=${encodeURIComponent(state.camMode)}&hand_mode=${encodeURIComponent(state.handMode)}&betas=${betas}&fov=${fov}`;
-      sec.innerHTML=`<div class="btitle"><b class="k">${P.name}</b><span class="sub">${source==='gt'?'GT':'模型推理'} 21点 · 原视频相机外参与内参 · 左右手同画面</span></div>
-        <div class="vwrap mujoco-wrap"><video class="retarget-video" preload="metadata" muted playsinline></video><div class="vbadge">Wuji Hand 正在自动渲染…</div></div>`;
-      appendPanel(sec,id);
-      const video=sec.querySelector('.retarget-video'), badge=sec.querySelector('.vbadge');
-      const pan={id,kind:'retarget',video,source,label:'Wuji Hand',renderDone:false,
-        renderStarted:false,loadRequested:false,failed:false,
-        videoUrl:U(`/retarget/${state.eid}?${rq}&_=${encodeURIComponent((source==='gt'?'gt':CKPT_TAG)+':'+RETARGET_RENDER_TAG)}`),
-        progressUrl:`/api/retarget/progress/${state.eid}?${rq}`};
-      video.controls=false; video.disablePictureInPicture=true; video.tabIndex=-1;
-      video.classList.add('synced-follower-video');
-      video.setAttribute('controlsList','nodownload nofullscreen noremoteplayback noplaybackrate');
-      video.setAttribute('aria-label','Wuji Hand video synchronized with the overall 2D video');
-      state.panels[id]=pan;
-      _wireServerVideoPanel(pan,badge,{autoStart:false});
-      deferredRobotPanels.push(pan);
-      if(preserveTime&&t>0) video.addEventListener('loadedmetadata',()=>{ try{video.currentTime=Math.min(t,video.duration||t);}catch(e){} },{once:true});
+      const parent={id,kind:P.kind,video:null,videos:[],children:[],renderDone:false,failed:false};
+      state.panels[id]=parent;
+      const updateParent=()=>{
+        parent.renderDone=parent.children.length>0&&parent.children.every(child=>child.renderDone);
+        parent.renderStarted=parent.children.some(child=>child.renderStarted);
+        parent.failed=parent.children.some(child=>child.failed);
+        updateExportButton();
+      };
+      for(const source of sources){
+        const cell=sec.querySelector(`[data-robot-source="${source}"]`);
+        const video=cell.querySelector('video'), badge=cell.querySelector('.vbadge');
+        const betas=source==='gt'?state.gtBetas:state.predBetas;
+        const fov=source==='gt'?'per_frame':state.predFov;
+        const query=`source=${source}&cam_mode=${encodeURIComponent(state.camMode)}&hand_mode=${encodeURIComponent(effectiveHandMode())}&betas=${betas}&fov=${fov}`;
+        const bust=`${source==='gt'?'gt':CKPT_TAG}:${renderTag}`;
+        const child={id:`${id}_${source}`,panelId:id,kind:P.kind,video,source,
+          label:`${methodLabel} ${source.toUpperCase()}`,renderDone:false,
+          renderStarted:false,loadRequested:false,failed:false,
+          videoUrl:U(`/${endpoint}/${state.eid}?${query}&_=${encodeURIComponent(bust)}`),
+          progressUrl:`/api/${endpoint}/progress/${state.eid}?${query}`,
+          isActive:()=>state.panels[id]===parent,onStatusChange:updateParent};
+        video.controls=false; video.disablePictureInPicture=true; video.tabIndex=-1;
+        video.classList.add('synced-follower-video');
+        video.setAttribute('controlsList','nodownload nofullscreen noremoteplayback noplaybackrate');
+        video.setAttribute('aria-label',`${methodLabel} ${source.toUpperCase()} video synchronized with the overall 2D video`);
+        parent.children.push(child); parent.videos.push(video);
+        _wireServerVideoPanel(child,badge,{autoStart:false});
+        deferredRobotPanels.push(child);
+        if(preserveTime&&t>0) video.addEventListener('loadedmetadata',()=>{ try{video.currentTime=Math.min(t,video.duration||t);}catch(e){} },{once:true});
+      }
+      const preferred=parent.children.find(child=>child.source==='pred')||parent.children[0];
+      parent.video=preferred&&preferred.video;
+      updateParent();
     } else if(P.kind==='nums'){
       sec.innerHTML = `<div class="bnums"></div>`;
       appendPanel(sec,id);
@@ -1017,7 +1046,7 @@ function buildPanels(preserveTime){
   if(!hasPrimary2D) settlePrimary2D();
   primary2DReady.then(()=>{
     for(const pan of deferredRobotPanels){
-      if(state.panels[pan.id]===pan) pan.releaseRender();
+      if(!pan.isActive||pan.isActive()) pan.releaseRender();
     }
   });
   if(!cont.children.length){
@@ -1040,15 +1069,17 @@ function requestDraw(){ _drawPending = true; }
 function syncMujocoVideos(force=false){
   if(!masterVideo) return;
   for(const id of ['mujoco_3d','wuji_retarget_3d']){
-    const pan=state.panels[id], follower=pan&&pan.video;
-    if(!follower||follower.readyState<1) continue;
-    const target=masterVideo.currentTime||0;
-    if(force||Math.abs((follower.currentTime||0)-target)>.12){
-      try{ follower.currentTime=Math.min(target,Number.isFinite(follower.duration)?follower.duration:target); }catch(e){}
+    const pan=state.panels[id], followers=pan?(pan.videos||[pan.video]):[];
+    for(const follower of followers){
+      if(!follower||follower.readyState<1) continue;
+      const target=masterVideo.currentTime||0;
+      if(force||Math.abs((follower.currentTime||0)-target)>.12){
+        try{ follower.currentTime=Math.min(target,Number.isFinite(follower.duration)?follower.duration:target); }catch(e){}
+      }
+      follower.playbackRate=masterVideo.playbackRate||1;
+      if(masterVideo.paused||masterVideo.ended) follower.pause();
+      else if(follower.paused) follower.play().catch(()=>{});
     }
-    follower.playbackRate=masterVideo.playbackRate||1;
-    if(masterVideo.paused||masterVideo.ended) follower.pause();
-    else if(follower.paused) follower.play().catch(()=>{});
   }
 }
 
@@ -1266,7 +1297,8 @@ function _exportSourceItem(spec){
   const source=panel&&panel.video;
   const ready=_mediaFrameReady(source);
   const rendered=Boolean(ready||(panel&&panel.renderDone));
-  return {...spec,panel,available:Boolean(panel),rendered,ready};
+  // 四路都是服务端渲染源；机器人面板即使隐藏，导出任务也能直接生成并缓存视频。
+  return {...spec,panel,available:Boolean(state.loaded),rendered,ready};
 }
 
 function _selectedExportSources(){
@@ -1284,10 +1316,12 @@ function updateExportPicker(){
     input.disabled=state.exporting;
     if(label){
       label.classList.toggle('unavailable',!item||!item.available);
-      label.title=!item||!item.available?'当前面板未显示'
-        :(item.rendered?'已渲染，导出时直接复用':'正在后台自动渲染，导出会等待并复用');
+      label.title=!item||!item.available?'加载样本后可导出'
+        :(item.rendered?'已渲染，导出时直接复用':'导出时由服务端渲染并缓存');
     }
   });
+  const separate=$('#exportSeparateBtn');
+  if(separate) separate.disabled=state.exporting||!state.loaded||!state.exportSelection.size;
 }
 
 function _setExportPickerOpen(open){
@@ -1336,6 +1370,11 @@ function wireExportPicker(){
       updateExportButton();
     };
   });
+  const separate=$('#exportSeparateBtn');
+  if(separate) separate.onclick=event=>{
+    event.stopPropagation();
+    exportVideo('separate');
+  };
   document.addEventListener('click',event=>{
     if(!picker.contains(event.target)) _setExportPickerOpen(false);
   });
@@ -1354,7 +1393,7 @@ function updateExportButton(){
   button.disabled=state.exporting||!state.loaded||!selected.length||Boolean(missing.length);
   if(!state.loaded) button.title='加载样本后才能导出';
   else if(!selected.length) button.title='请至少选择一个导出画面';
-  else if(missing.length) button.title='所选面板未显示：'+missing.map(item=>item.label).join('、');
+  else if(missing.length) button.title='所选画面当前不可导出：'+missing.map(item=>item.label).join('、');
   else if(unrendered.length) button.title='后台渲染尚未完成；点击后等待并导出：'+unrendered.map(item=>item.label).join('、');
   else button.title='全部已渲染，点击直接复用现有 MP4 导出';
   updateExportPicker();
@@ -1377,12 +1416,13 @@ function hideExportProgress(){
   if(wrap){ wrap.hidden=true; wrap.classList.remove('done','error'); }
 }
 
-async function exportVideo(){
+async function exportVideo(outputFormat='grid'){
   if(state.exporting) return;
+  if(!['grid','separate'].includes(outputFormat)) outputFormat='grid';
   const sources=_selectedExportSources();
   if(!sources.length){ info.textContent='请至少选择一个导出画面'; return; }
   const missing=sources.filter(item=>!item.available);
-  if(missing.length){ info.textContent='所选面板未显示：'+missing.map(item=>item.label).join('、'); return; }
+  if(missing.length){ info.textContent='所选画面当前不可导出：'+missing.map(item=>item.label).join('、'); return; }
   const unrendered=sources.filter(item=>!item.rendered);
   state.exporting=true; state.exportProgress=0; hideExportProgress();
   setExportProgress(0,'正在提交导出任务'); updateExportButton();
@@ -1396,12 +1436,13 @@ async function exportVideo(){
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         sources:sources.map(item=>item.id), mode:state.mode, layout:state.layout,
-        content:'both', cam_mode:state.camMode, hand_mode:state.handMode,
+        content:'both', cam_mode:state.camMode, hand_mode:effectiveHandMode(),
         gt_betas:state.gtBetas, pred_betas:state.predBetas, pred_fov:state.predFov,
         world_views:state.views.world_motion_3d||null,
         world_coord_mode:state.worldCoordMode,
         show_traj:state.showTraj, show_cam_hand:state.showCamHand,
         raw:state.rawOnly,
+        output_format:outputFormat,
       }),
     });
     if(!response.ok) throw new Error((await response.text()).replace(/<[^>]+>/g,' ').trim()||`HTTP ${response.status}`);
@@ -1422,7 +1463,8 @@ async function exportVideo(){
     anchor.href=U(result.download); anchor.download=result.filename||'';
     document.body.appendChild(anchor); anchor.click(); anchor.remove();
     completed=true; setExportProgress(1,'导出完成，已开始下载','done');
-    info.textContent='导出完成：'+sources.map(item=>item.label).join(' + ');
+    info.textContent=(outputFormat==='separate'?'独立视频已打包：':'导出完成：')+
+      sources.map(item=>item.label).join(' + ');
   }catch(error){
     setExportProgress(state.exportProgress,'导出失败：'+error.message,'error');
     info.textContent='导出失败：'+error.message;
@@ -1688,7 +1730,7 @@ function drawChip(g, rows, x, y, align='tl', swatch=false){
 }
 
 // ── 世界/相机系 3D 场景（正交投影 + orbit + 缩放；可一次画多路 items 叠加）──────────────
-// items: [{d: 世界系 payload, dash: 虚线?, tag?: 标签}]；叠加时 GT 实线 + Pred 虚线。
+// items: [{d: 世界系 payload, dash: 虚线?, tag?: 标签}]；叠加时 GT 实线 + PRED 虚线。
 function renderScene(canvas, items, v, modeKey, video){
   const dpr = window.devicePixelRatio || 1;
   const W = canvas.clientWidth, H = canvas.clientHeight;
@@ -1810,11 +1852,11 @@ function renderScene(canvas, items, v, modeKey, video){
 
   // 固定世界画世界轴；相机系画当前 OpenCV 相机轴（光心恒为原点）。
   if((plan.frame==='world' && plan.showCam) || plan.frame==='cam'){
-    const aL=R*0.6, O=proj([0,0,0], null); g.setLineDash([]);
+    const aL=R*0.6, O=proj([0,0,0], null); g.save(); g.setLineDash([]); g.globalAlpha=.48;
     g.lineCap='round';
     [['X',[aL,0,0],'#ff6b6b'],['Y',[0,aL,0],'#51cf66'],['Z',[0,0,aL],'#5c9dff']].forEach(([nm,e,col])=>{
       const P=proj(e,null);
-      g.strokeStyle='#05070a'; g.lineWidth=3;                   // 细描边仍能把坐标轴与网格分开
+      g.strokeStyle='#05070a'; g.lineWidth=2.4;
       g.beginPath(); g.moveTo(O[0],O[1]); g.lineTo(P[0],P[1]); g.stroke();
       g.strokeStyle=col; g.lineWidth=1.35;
       g.beginPath(); g.moveTo(O[0],O[1]); g.lineTo(P[0],P[1]); g.stroke();
@@ -1822,6 +1864,7 @@ function renderScene(canvas, items, v, modeKey, video){
     g.lineCap='butt';
     g.fillStyle='#e6edf3'; g.beginPath(); g.arc(O[0],O[1],3,0,7); g.fill();
     g.fillStyle='#8b98a8'; g.font='11px system-ui'; g.fillText('O', O[0]+5, O[1]-5);
+    g.restore();
   }
 
   const handCol=['#4dd2ff','#ffd34d'];                 // 0=左手(青), 1=右手(金)
@@ -1843,7 +1886,7 @@ function renderScene(canvas, items, v, modeKey, video){
       const Pe=proj(end,null), vx=Pe[0]-Pc[0], vy=Pe[1]-Pc[1], vl=Math.max(1,Math.hypot(vx,vy));
       poseSegments.push({Pe,color});
       const ux=vx/vl, uy=vy/vl, ah=width>=4?9:7;
-      g.save(); g.lineCap='round'; g.lineJoin='round'; g.setLineDash(pattern||[]);
+      g.save(); g.globalAlpha=.58; g.lineCap='round'; g.lineJoin='round'; g.setLineDash(pattern||[]);
       g.strokeStyle='#05070a'; g.lineWidth=width+4;
       g.beginPath(); g.moveTo(Pc[0],Pc[1]); g.lineTo(Pe[0],Pe[1]); g.stroke();
       g.strokeStyle=color; g.lineWidth=width; g.shadowColor=color; g.shadowBlur=6;
@@ -1853,25 +1896,25 @@ function renderScene(canvas, items, v, modeKey, video){
       g.lineTo(Pe[0]-ux*ah+uy*ah*.52,Pe[1]-uy*ah-ux*ah*.52); g.closePath(); g.fill();
       g.shadowBlur=0; g.font=`bold ${width>=4?11:10}px system-ui`; const tw=g.measureText(text).width;
       let lx=Math.max(3,Math.min(W-tw-7,Pe[0]+4)), ly=Math.max(12,Math.min(H-8,Pe[1]-4));
-      g.globalAlpha=.9; g.fillStyle='#05070a'; g.fillRect(lx-3,ly-10,tw+6,14);
-      g.globalAlpha=1; g.fillStyle=color; g.fillText(text,lx,ly); g.restore();
+      g.globalAlpha=.68; g.fillStyle='#05070a'; g.fillRect(lx-3,ly-10,tw+6,14);
+      g.globalAlpha=.72; g.fillStyle=color; g.fillText(text,lx,ly); g.restore();
     };
-    // 相机是辅助参照，姿态轴统一用虚线，避免与实体手骨架混淆。
-    const cameraDash=[6,4];
+    // 相机姿态轴用低透明实线：方向连续可读，同时不压过手部与渐变轨迹。
+    const cameraDash=[];
     drawPoseArrow(right,axisLen,poseColor.x,'右 / +Xc',2.4,cameraDash);
     drawPoseArrow(up,axisLen,poseColor.y,'上 / -Yc',2.4,cameraDash);
     drawPoseArrow(view,viewLen,poseColor.z,'视线 / +Zc',3.2,cameraDash);
     g.save();
-    // 光心也使用虚线框；不再填充，保持“相机为辅助参照”的语义。
+    // 光心也使用低透明实线框，不填充，保持“相机为辅助参照”的语义。
     const size=(isPred?16:12)*v.zoom, bx=Pc[0]-size/2, by=Pc[1]-size/2;
-    g.setLineDash(cameraDash); g.strokeStyle='#05070a'; g.lineWidth=2.6; g.strokeRect(bx,by,size,size);
+    g.globalAlpha=.55; g.setLineDash(cameraDash); g.strokeStyle='#05070a'; g.lineWidth=2.6; g.strokeRect(bx,by,size,size);
     g.strokeStyle=markerColor; g.lineWidth=1.2; g.strokeRect(bx,by,size,size);
     g.restore();
 
-    // 只在方块遮住的范围内把姿态轴重绘成短虚线，形成透视效果。
+    // 在方块遮住的范围内重绘姿态轴，形成透视效果。
     g.save(); g.beginPath(); g.rect(bx,by,size,size); g.clip(); g.lineCap='round';
     for(const seg of poseSegments){
-      g.setLineDash([2,2]);
+      g.setLineDash([]); g.globalAlpha=.58;
       g.strokeStyle='#05070a'; g.lineWidth=4;
       g.beginPath(); g.moveTo(Pc[0],Pc[1]); g.lineTo(seg.Pe[0],seg.Pe[1]); g.stroke();
       g.strokeStyle=seg.color; g.lineWidth=2;
@@ -1884,7 +1927,7 @@ function renderScene(canvas, items, v, modeKey, video){
   const cameraOverlays=[];
 
   for(const it of items){ const d=it.d, cam=camOf(d), dash = it.dash ? [7,5] : [];
-    const cameraTrajDash=[8,5];                   // 相机始终虚线；手仍以 GT 实线 / Pred 虚线区分
+    const cameraTrajDash=[8,5];                   // 相机始终虚线；手仍以 GT 实线 / PRED 虚线区分
     const handTrajDash=it.dash?[8,5]:[];
 
     // 相机位姿（world 帧 + 相机与世界）：位置轨迹 + 当前帧三轴（w2c 行=相机基向量在世界方向）
@@ -1903,10 +1946,10 @@ function renderScene(canvas, items, v, modeKey, video){
         if(plane && state.showCamHand) drawDropLine(g, cam.t, CAMCOL, plane, proj);
         g.fillStyle=CAMCOL; g.beginPath(); g.arc(Pc[0],Pc[1], it.dash?3:4,0,7); g.fill();
         if(!plan.anchorFirst){
-          g.fillStyle='#8b98a8'; g.font='11px system-ui'; g.fillText(it.dash?'Pred cam':'cam', Pc[0]+5, Pc[1]-5);
+          g.fillStyle='#8b98a8'; g.font='11px system-ui'; g.fillText(it.dash?'PRED cam':'cam', Pc[0]+5, Pc[1]-5);
         } else if(state.showCamHand){
-          const cameraName=it.tag||(state.no_truth?'Pred':(state.rawOnly?'GT':(it.dash?'Pred':'GT')));
-          cameraOverlays.push({cam,isPred:cameraName==='Pred'});
+          const cameraName=it.tag||(state.no_truth?'PRED':(state.rawOnly?'GT':(it.dash?'PRED':'GT')));
+          cameraOverlays.push({cam,isPred:cameraName==='PRED'});
         }
       }
     }
@@ -1921,7 +1964,7 @@ function renderScene(canvas, items, v, modeKey, video){
         g.save(); g.globalAlpha=.78; g.strokeStyle=handCol[h]; g.lineWidth=1.4;
         g.setLineDash([]);
         g.beginPath(); g.moveTo(Pc[0],Pc[1]); g.lineTo(Ph[0],Ph[1]); g.stroke();
-        const prefix=items.length>1?(it.dash?'Pred ':'GT '):'';
+        const prefix=items.length>1?(it.dash?'PRED ':'GT '):'';
         const label=`${prefix}${h===0?'L':'R'} ${dist.toFixed(1)} cm`;
         g.font='11px system-ui'; const tw=g.measureText(label).width;
         let lx=(Pc[0]+Ph[0])/2+5, ly=(Pc[1]+Ph[1])/2+(it.dash?11:-7);
@@ -1957,8 +2000,8 @@ function renderScene(canvas, items, v, modeKey, video){
               : (plan.anchorFirst
                 ? (zUp?'固定世界系 Z-up(X右/Y前/Z上)':'固定世界系 OpenCV(X右/Y下/Z前)')
                 : '世界系');
-  const lay = state.no_truth ? 'Pred'
-            : (state.layout==='overlay' ? 'GT实线 / Pred虚线' : (items[0].tag||''));
+  const lay = state.no_truth ? 'PRED'
+            : (state.layout==='overlay' ? 'GT实线 / PRED虚线' : (items[0].tag||''));
   const gridTxt = plane ? `　格 ${plane.step>=100 ? (plane.step/100)+' m' : plane.step+' cm'}` : '';
   drawChip(g, [{t:fname, c:'#e6edf3', s:13, b:true},
                {t:`${lay}　cm${gridTxt}`, c:'#8b98a8', s:11}], 12, 12, 'tl');
@@ -2027,7 +2070,7 @@ function drawMetrics(){
   el.innerHTML = h;
 }
 
-// ── 「整体」块下方综合数字表：相机(pos/欧拉/fov)+左右手(pos/欧拉/betas) 每帧 GT|Pred|Δ + 底部整段平均 ──
+// ── 「整体」块下方综合数字表：相机(pos/欧拉/fov)+左右手(pos/欧拉/betas) 每帧 GT|PRED|Δ + 底部整段平均 ──
 function _fmt3(a, p){ return a==null ? '—' : a.map(x=>(+x).toFixed(p)).join(' , '); }
 function _delta(g, pd){ return (g&&pd) ? g.map((x,i)=>pd[i]-x) : null; }
 function _bfmt(a){ return a ? a.map(x=>(+x).toFixed(2)).join(' ') : '—'; }   // betas 10 值一行
@@ -2036,20 +2079,20 @@ function _entTable(title, rec, cf, withFov){
   const at = o => (o ? o[Math.min(cf, o.length-1)] : null);
   const g = rec.gt || {}, p = rec.pred || {};
   const gpos=at(g.pos), ppos=at(p.pos), geul=at(g.eul), peul=at(p.eul);
-  let h = `<table class="nt"><thead><tr><th>${title}</th><th>GT</th><th>Pred</th><th>Δ</th></tr></thead><tbody>`;
+  let h = `<table class="nt"><thead><tr><th>${title}</th><th>GT</th><th>PRED</th><th>Δ</th></tr></thead><tbody>`;
   h += `<tr><td>位置 XYZ (cm)</td><td>${_fmt3(gpos,2)}</td><td>${_fmt3(ppos,2)}</td><td class="d">${_fmt3(_delta(gpos,ppos),2)}</td></tr>`;
   h += `<tr><td>欧拉 XYZ (°)</td><td>${_fmt3(geul,1)}</td><td>${_fmt3(peul,1)}</td><td class="d">${_fmt3(_delta(geul,peul),1)}</td></tr>`;
   if(withFov){ const gf=at(g.fov), pf=at(p.fov);
     h += `<tr><td>FoV (°)</td><td>${_fmt3(gf,2)}</td><td>${_fmt3(pf,2)}</td><td class="d">${_fmt3(_delta(gf,pf),2)}</td></tr>`; }
-  if(g.betas || p.betas){   // betas 也分 GT/Pred 两列（与位置/欧拉对齐），不再上下叠
+  if(g.betas || p.betas){   // betas 也分 GT/PRED 两列（与位置/欧拉对齐），不再上下叠
     h += `<tr><td>betas(10)</td><td class="betas">${_bfmt(at(g.betas))}</td><td class="betas">${_bfmt(at(p.betas))}</td><td>—</td></tr>`;
   }
   return h + '</tbody></table>';
 }
-// 整段平均（固定，不随帧）：GT/Pred 的 FoV 与左右手 betas 平均——与上面「每帧」列对比看抖动。
+// 整段平均（固定，不随帧）：GT/PRED 的 FoV 与左右手 betas 平均——与上面「每帧」列对比看抖动。
 function _meanTable(mean){
   if(!mean) return '';
-  let h = `<table class="nt"><thead><tr><th>整段平均</th><th>GT</th><th>Pred</th></tr></thead><tbody>`;
+  let h = `<table class="nt"><thead><tr><th>整段平均</th><th>GT</th><th>PRED</th></tr></thead><tbody>`;
   h += `<tr><td>FoV (°)</td><td>${_fmt3(mean.gt_fov,2)}</td><td>${_fmt3(mean.pred_fov,2)}</td></tr>`;
   const gb=mean.gt_betas||{}, pb=mean.pred_betas||{};
   h += `<tr><td>左手 betas</td><td class="betas">${_bfmt(gb.left)}</td><td class="betas">${_bfmt(pb.left)}</td></tr>`;
@@ -2060,7 +2103,7 @@ function _meanTable(mean){
 function _meanBetasTable(mean){
   if(!mean) return '';
   const gb=mean.gt_betas||{}, pb=mean.pred_betas||{};
-  let h = `<table class="nt"><thead><tr><th>整段平均</th><th>GT</th><th>Pred</th></tr></thead><tbody>`;
+  let h = `<table class="nt"><thead><tr><th>整段平均</th><th>GT</th><th>PRED</th></tr></thead><tbody>`;
   h += `<tr><td>左手 betas</td><td class="betas">${_bfmt(gb.left)}</td><td class="betas">${_bfmt(pb.left)}</td></tr>`;
   h += `<tr><td>右手 betas</td><td class="betas">${_bfmt(gb.right)}</td><td class="betas">${_bfmt(pb.right)}</td></tr>`;
   return h + '</tbody></table>';
@@ -4794,12 +4837,12 @@ function ldResultHTML(r){
   return out;
 }
 
-// 该内容(content)在 overlay/side 下各画哪些 item(GT 实线 / Pred 虚线)。
+// 该内容(content)在 overlay/side 下各画哪些 item(GT 实线 / PRED 虚线)。
 function sceneItems(){
-  if(state.no_truth) return {ov:[{d:state.pred,dash:false}], gt:[{d:state.pred,dash:false,tag:'Pred'}], pred:[]};
+  if(state.no_truth) return {ov:[{d:state.pred,dash:false}], gt:[{d:state.pred,dash:false,tag:'PRED'}], pred:[]};
   if(state.rawOnly)  return {ov:[{d:state.gt,dash:false}],   gt:[{d:state.gt,dash:false,tag:'GT'}],   pred:[]};
   return {ov:[{d:state.gt,dash:false},{d:state.pred,dash:true}],
-          gt:[{d:state.gt,dash:false,tag:'GT'}], pred:[{d:state.pred,dash:false,tag:'Pred'}]};
+          gt:[{d:state.gt,dash:false,tag:'GT'}], pred:[{d:state.pred,dash:false,tag:'PRED'}]};
 }
 function draw(){
   const it = state.loaded ? sceneItems() : null;
@@ -4860,12 +4903,13 @@ function attachOrbit(canvas, v, onChange){
   canvas.addEventListener('mouseup',()=>{ if(onChange) onChange(); });
 }
 
-// GT/Pred 叠加/并排控件跟随「整体·2D」面板重建，因此每次创建面板时重新绑定。
+// GT/PRED 叠加/并排控件跟随「整体·2D」面板重建，因此每次创建面板时重新绑定。
 function wireLayoutControls(root){
   root.querySelectorAll('#layoutSeg button').forEach(button=>button.onclick=()=>{
     if(state.layout===button.dataset.layout) return;
     state.layout=button.dataset.layout;
-    console.log('[btn] GT/Pred 对照布局 → '+state.layout);
+    state.layoutPref=state.layout;
+    console.log('[btn] GT/PRED 对照布局 → '+state.layout);
     if(state.loaded) buildPanels(true);
   });
 }

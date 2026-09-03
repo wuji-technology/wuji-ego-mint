@@ -23,7 +23,7 @@ Optional research backends   Training engine -----> Checkpoint
 
 ### Data plane
 
-`ray_pipeline/` contains the repository-owned scheduling, actors, resumable
+`ego_pipeline/` contains the repository-owned scheduling, actors, resumable
 manifests, monitoring, and LeRobot export code. Its `backends/` package defines
 interfaces for optional upstream research models, and its `data_cleaning/`
 package contains trajectory filters used before export. A public checkout is

@@ -23,7 +23,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from scipy.spatial.transform import Rotation as _R
 
-log = logging.getLogger("ray_pipeline.result_to_lerobot")
+log = logging.getLogger("ego_pipeline.result_to_lerobot")
 
 STATE_DIM = 122
 ACTION_DIM = 102

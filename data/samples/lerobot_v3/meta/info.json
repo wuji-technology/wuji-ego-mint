@@ -1,10 +1,10 @@
 {
   "codebase_version": "v3.0",
   "robot_type": "ego_hand",
-  "total_episodes": 2,
-  "total_frames": 900,
-  "total_tasks": 2,
-  "total_videos": 2,
+  "total_episodes": 8,
+  "total_frames": 3600,
+  "total_tasks": 8,
+  "total_videos": 8,
   "chunks_size": 1000,
   "data_files_size_in_mb": 100,
   "video_files_size_in_mb": 500,
@@ -12,7 +12,7 @@
   "video_path": "videos/{video_key}/chunk-{chunk_index:03d}/file-{file_index:03d}.mp4",
   "fps": 30.0,
   "splits": {
-    "train": "0:2"
+    "train": "0:8"
   },
   "features": {
     "index": {
@@ -184,7 +184,13 @@
     "strategy": "sorted dataset indices with centered clips",
     "dataset_indices": [
       44,
-      45
+      45,
+      29,
+      14,
+      58,
+      49,
+      60,
+      83
     ],
     "clip_duration_seconds": 15.0
   }

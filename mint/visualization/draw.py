@@ -131,17 +131,21 @@ def label(frame_bgr: np.ndarray, text: str) -> None:
 
 
 def presence_label(frame_bgr: np.ndarray, rows) -> None:
-    """Draw right-aligned ``GT/Pred L:Y R:N`` rows in the top-right corner."""
+    """Draw explicit ``left: yes/no`` and ``right: yes/no`` 2D status rows."""
     rows = list(rows)
     if not rows:
         return
 
     def mark(value):
-        return "?" if value is None else ("Y" if bool(value) else "N")
+        # Legacy checkpoints without presence scores render both hands.
+        return "yes" if value is None or bool(value) else "no"
 
     font = cv2.FONT_HERSHEY_SIMPLEX
     scale, thickness = 0.58, 1
-    texts = [f"{name}  L:{mark(left)} R:{mark(right)}" for name, left, right in rows]
+    texts = [
+        f"{name + '  ' if name else ''}left: {mark(left)}  right: {mark(right)}"
+        for name, left, right in rows
+    ]
     sizes = [cv2.getTextSize(text, font, scale, thickness)[0] for text in texts]
     line_h = max(height for _width, height in sizes) + 11
     panel_w = max(width for width, _height in sizes) + 16
@@ -153,7 +157,7 @@ def presence_label(frame_bgr: np.ndarray, rows) -> None:
                   (0, 0, 0), -1)
     cv2.addWeighted(shade, 0.58, frame_bgr, 0.42, 0, dst=frame_bgr)
 
-    colors = {"GT": (120, 255, 120), "Pred": (100, 140, 255)}
+    colors = {"GT": (120, 255, 120), "PRED": (100, 140, 255)}
     for row_idx, ((name, _left, _right), text, (width, height)) in enumerate(
             zip(rows, texts, sizes)):
         x = frame_bgr.shape[1] - width - 12

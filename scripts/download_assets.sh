@@ -136,5 +136,4 @@ echo "[1/1] Public MINT model"
 download_mint_model
 
 echo "MINT model checkpoint is ready."
-echo "URDF and STL robot descriptions are not downloaded by this script."
 echo "MANO is not downloaded. Follow docs/installation.md and accept its license."

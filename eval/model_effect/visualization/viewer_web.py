@@ -51,7 +51,7 @@ from visualization.viewer.store import Store               # noqa: E402
 
 def main() -> int:
     p = argparse.ArgumentParser(
-        description="网页端 lingbotmap 效果验证：2D GT|Pred 重投影视频 + 世界系 3D 双视图",
+        description="网页端 lingbotmap 效果验证：2D GT|PRED 重投影视频 + 世界系 3D 双视图",
         formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
     p.add_argument("--input", default=str(REPO_DIR / "data" / "samples"),
                    help="浏览**起点**目录（默认指向 data/samples）；不再是天花板——"

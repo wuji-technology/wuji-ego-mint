@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """世界系 3D payload 构建（网页端 canvas 用，纯 numpy，JSON 安全）。
 
-GT 与 Pred 各调一次 build_world_payload：输入都是「已解算好的世界系 joints + 该侧相机」，
+GT 与 PRED 各调一次 build_world_payload：输入都是「已解算好的世界系 joints + 该侧相机」，
 输出前端 plot3d 所需字段（骨架 joints / 手腕轨迹 traj / 骨架连接 conn / 逐帧有效 valid /
 逐帧 world→cam 旋转 cam_R / 相机位置 cam_t）。单位统一 cm。
 
@@ -40,7 +40,7 @@ def _round_traj(P: np.ndarray, valid_h: np.ndarray, ndigits: int = 2) -> list:
 
 def build_world_payload(world: dict, valid_lr: np.ndarray, cam_c2w: np.ndarray,
                         *, fps: float) -> dict:
-    """解算单侧（GT 或 Pred）世界系 3D payload。
+    """解算单侧（GT 或 PRED）世界系 3D payload。
 
     world:    hands_to_world 产物 {'left'|'right': {'joints'(T,21,3) m, ...}}。
     valid_lr: (T,2) bool，[左,右] 逐帧有效。
