@@ -175,7 +175,7 @@ One shared encode per frame, four factorized heads, then explicit rigid composit
 
 <img src="assets/readme/figure_egopipeline.webp" width="100%" alt="EgoPipeline stages: hand detection and frame filtering, camera pose estimation through GeoCalib, MoGe-2 and MegaSaM, HaWoR hand reconstruction, then outlier rejection, interpolation, temporal smoothing and the world-coordinate transform">
 
-<div align="center"><sub><b>EgoPipeline</b>, the offline supervision generator. Top: pre-filtering and the per-stage estimators. Bottom: the post-processing that turns raw stage output into usable structured state. Stage by stage in the table below.</sub></div>
+<div align="center"><sub>EgoPipeline stages.</sub></div>
 
 ### Where the supervision comes from
 
