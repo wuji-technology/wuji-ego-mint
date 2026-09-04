@@ -172,7 +172,7 @@ Viewer 启动后会自动在默认浏览器打开 `http://127.0.0.1:8011`，然�
 
 <img src="assets/readme/figure_egopipeline.webp" width="100%" alt="EgoPipeline 各级：手部检测与帧过滤，GeoCalib / MoGe-2 / MegaSaM 相机位姿估计，HaWoR 手部重建，以及离群剔除、插值、时序平滑与世界坐标变换">
 
-<div align="center"><sub><b>EgoPipeline</b>，离线的监督信号生成器。上排：预过滤与各级估计器。下排：把各级原始输出整理成可用结构化状态的后处理。逐级说明见下方表格。</sub></div>
+<div align="center"><sub>EgoPipeline stages.</sub></div>
 
 ### 监督信号从哪里来
 
