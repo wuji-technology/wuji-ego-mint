@@ -20,12 +20,12 @@ def test_only_selected_stage_configs_are_kept():
     ]
 
 
-def test_stage1_matches_step_19000_training_recipe():
+def test_stage1_uses_public_pretraining_recipe():
     config = _load(STAGE1_NAME)
 
     assert config["model"]["pretrained_exclude"] == ["camera_head*"]
     assert "freeze" not in config["model"]
-    assert len(config["data"]["root"]) == 4
+    assert len(config["data"]["root"]) == 3
     assert config["data"]["require_mano_gt"] is True
     assert set(config["loss"]) == {
         "hand_presence", "image_hand", "camera", "fov", "mano_param"
@@ -50,9 +50,7 @@ def test_stage2_matches_step_4500_camera_only_recipe():
         "trans_l1", "rot_geo", "trans_vel_l1", "rot_vel_geo"
     ]
     assert config["train"]["grad_accum"] == 2
-    assert config["train"]["init_from"].endswith(
-        "/lingbotmap_distill_axis_angle_refine/step_00019000/model.safetensors"
-    )
+    assert config["train"]["init_from"] == "checkpoints/stage1/model.safetensors"
     assert config["optim"]["param_groups"] == [{
         "match": "backbone.camera_head",
         "lr": 5.0e-5,

@@ -74,13 +74,13 @@ METHODS = {
         ("--variant", "egopipeline"), uses_work=True,
     ),
     "ours_step4500": Method(
-        "pipeline_train", EXTERNAL_ROOT / "code/ours/run_student.py",
+        "mint", EXTERNAL_ROOT / "code/ours/run_student.py",
         ("--ckpt", str(TRAIN_RUN / "step_00004500"),
          "--config", str(TRAIN_CONFIG), "--method", "ours_step4500"),
         python=PIPELINE_PYTHON,
     ),
     "ours_step19000": Method(
-        "pipeline_train", EXTERNAL_ROOT / "code/ours/run_student.py",
+        "mint", EXTERNAL_ROOT / "code/ours/run_student.py",
         ("--ckpt", str(TRAIN_RUN / "step_00019000"),
          "--config", str(TRAIN_CONFIG), "--method", "ours_step19000"),
         python=PIPELINE_PYTHON,

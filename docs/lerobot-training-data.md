@@ -2,8 +2,8 @@
 
 This document defines only the LeRobot fields consumed by the two retained MINT
 training configurations. It is not a general LeRobot v3 specification. The
-contract was checked against the actual Ego4D, EgoDex, EPIC-KITCHENS,
-`nuoyiteng`, and WorldEngine roots used by the historical runs.
+contract covers the Ego4D, EgoDex, and EPIC-KITCHENS pretraining data and the
+camera-trajectory data required by Stage 2.
 
 The authoritative reader is `model_train/data/lingbotmap/lerobot_v3.py`. Camera
 translation statistics are read separately by
@@ -11,16 +11,15 @@ translation statistics are read separately by
 
 ## Datasets used by the retained recipes
 
-All five roots use LeRobot `v3.0`, 30 FPS H.264 ego video, the OpenCV camera
+The datasets use LeRobot `v3.0`, 30 FPS H.264 ego video, the OpenCV camera
 coordinate convention, and `hand_frame: camera`.
 
-| Stage | Dataset root suffix | Stored video shape `[H,W,C]` | Supervision consumed |
+| Stage | Example dataset root | Stored video shape `[H,W,C]` | Supervision consumed |
 | --- | --- | --- | --- |
-| Stage 1 | `build_train_lerobot/ego4d/lerobot_v3` | `[768,1024,3]` | Camera, FoV, per-side presence, and camera-frame MANO |
-| Stage 1 | `build_train_lerobot/egodex/lerobot_v3` | `[384,512,3]` | Camera, FoV, per-side presence, and camera-frame MANO |
-| Stage 1 | `build_train_lerobot/epickitchen/lerobot_v3` | `[384,512,3]` | Camera, FoV, per-side presence, and camera-frame MANO |
-| Stage 1 | `build_train_lerobot/nuoyiteng/lerobot_v3` | `[384,512,3]` | Camera, FoV, per-side presence, and camera-frame MANO |
-| Stage 2 | `build_train_lerobot_worldengine/20260730_191656/worldengine` | `[384,512,3]` | Camera translation and rotation only |
+| Stage 1 | `data/lerobot/ego4d/lerobot_v3` | `[768,1024,3]` | Camera, FoV, per-side presence, and camera-frame MANO |
+| Stage 1 | `data/lerobot/egodex/lerobot_v3` | `[384,512,3]` | Camera, FoV, per-side presence, and camera-frame MANO |
+| Stage 1 | `data/lerobot/epickitchen/lerobot_v3` | `[384,512,3]` | Camera, FoV, per-side presence, and camera-frame MANO |
+| Stage 2 | `data/lerobot/stage2/lerobot_v3` (placeholder) | `[384,512,3]` | Camera translation and rotation only |
 
 Stage 2 files contain additional FoV, MANO, presence, and principal-point data,
 but the retained Stage 2 loss trains only the camera head. Its configuration
@@ -126,8 +125,8 @@ The current Stage 1 recipe does not use `left_kpt21` or `right_kpt21` because
 
 ## Video contract and frame alignment
 
-The referenced stream is `videos/observation.images.ego/**/*.mp4`. The five
-historical roots were verified as H.264, YUV420p, 30 FPS. Decord returns RGB
+The referenced stream is `videos/observation.images.ego/**/*.mp4`. Prepare the
+videos as H.264, YUV420p, 30 FPS. Decord returns RGB
 `uint8` frames to the loader.
 
 For a clip beginning at episode-local offset `off`, frame `k` is read as:
@@ -214,5 +213,5 @@ they are not additional source Parquet columns.
 
 Columns commonly present in the inspected exports but not used by the retained
 training recipes include `index`, `task_index`, `main_type`, per-frame
-`timestamp`, task text, atomic segments, WorldEngine `cam_principal_norm`, and
+`timestamp`, task text, atomic segments, Stage 2 `cam_principal_norm`, and
 all action fields. No `action` column is required by the MINT trainer.

@@ -1,5 +1,5 @@
-# MINT Step 2 configuration used by the 2026-08-10 A800 run at step 4500.
-# Source run: NVIDIA_A800-SXM4-80GB/20260810_161322/volcano_stage2_resume_worldengine_camera_only
+# MINT Stage 2 camera-only fine-tuning recipe.
+# Run from the repository root and set train.init_from to your Stage 1 checkpoint.
 model:
   name: split_fov_head
   pretrained: null
@@ -43,7 +43,7 @@ model:
 data:
   name: lerobot_v3
   root:
-    - /cpfs/zhuzijie/wuji-ego-pipeline-train/output/scripts/data_processed/pipeline_lerobot/build_train_lerobot_worldengine/20260730_191656/worldengine
+    - data/lerobot/stage2/lerobot_v3  # Set to your prepared camera-trajectory dataset.
   sample_seed: 42
   camera_translation_normalization:
     enabled: true
@@ -70,8 +70,8 @@ loss:
       - {name: rot_vel_geo, weight: 0.5}
 
 train:
-  run_name: volcano_stage2_resume_worldengine_camera_only
-  init_from: /cpfs/zhuzijie/wuji-ego-pipeline-train/output/model_train/NVIDIA_H20/20260808_193031/lingbotmap_distill_axis_angle_refine/step_00019000/model.safetensors
+  run_name: mint_stage2_camera_only
+  init_from: checkpoints/stage1/model.safetensors
   reproducibility:
     enabled: true
     seed: 42
@@ -87,8 +87,7 @@ train:
     enabled: true
     project: lingbotmap-distill
     name: null
-    mode: online
-    api_key_file: /cpfs/zhuzijie/wuji-ego-pipeline-train/model_train/configs/wandb/wandb_key.md
+    mode: offline
 
 optim:
   lr: 5.0e-5

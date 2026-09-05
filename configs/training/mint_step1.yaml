@@ -1,8 +1,8 @@
-# MINT Step 1 configuration used by the 2026-08-08 H20 run at step 19000.
-# Source run: NVIDIA_H20/20260808_193031/lingbotmap_distill_axis_angle_refine
+# MINT Stage 1 pretraining recipe with three public data sources.
+# Run from the repository root and configure the local asset and dataset paths.
 model:
   name: split_fov_head
-  pretrained: /cpfs/zhuzijie/wuji-ego-pipeline-train/weights/lingbotmap/lingbot-map.pt
+  pretrained: assets/models/lingbot-map.pt
   pretrained_exclude: ["camera_head*"]
   enable_hand: true
   hand_head:
@@ -39,10 +39,9 @@ model:
 data:
   name: lerobot_v3
   root:
-    - /cpfs/zhuzijie/wuji-ego-pipeline-train/output/scripts/data_processed/pipeline_lerobot/build_train_lerobot/ego4d/lerobot_v3
-    - /cpfs/zhuzijie/wuji-ego-pipeline-train/output/scripts/data_processed/pipeline_lerobot/build_train_lerobot/egodex/lerobot_v3
-    - /cpfs/zhuzijie/wuji-ego-pipeline-train/output/scripts/data_processed/pipeline_lerobot/build_train_lerobot/epickitchen/lerobot_v3
-    - /cpfs/zhuzijie/wuji-ego-pipeline-train/output/scripts/data_processed/pipeline_lerobot/build_train_lerobot/nuoyiteng/lerobot_v3
+    - data/lerobot/ego4d/lerobot_v3
+    - data/lerobot/egodex/lerobot_v3
+    - data/lerobot/epickitchen/lerobot_v3
   camera_translation_normalization:
     enabled: true
     cache_dir: output/cache/camera_normalization
@@ -107,8 +106,7 @@ train:
     enabled: true
     project: lingbotmap-distill
     name: null
-    mode: online
-    api_key_file: /cpfs/zhuzijie/wuji-ego-pipeline-train/model_train/configs/wandb/wandb_key.md
+    mode: offline
 
 optim:
   lr: 1.0e-4
@@ -127,17 +125,17 @@ dist:
   master_addr: 127.0.0.1
   master_port: 29500
 
-aliyun:
+aliyun:  # Configure these placeholders before submitting a cloud training job.
   region: cn-hangzhou
-  workspace_id: "590221"
-  resource_id: quotai7l7gqmouqw
-  image: ego-pretrain-registry-vpc.cn-hangzhou.cr.aliyuncs.com/egoscale/pipeline_distill:pipeline-distill-v2_accelerated
-  cpfs_uri: bmcpfs://cpfs-00000ub3ici1dnniit2i0-vpc-egtdgw.cn-hangzhou.cpfs.aliyuncs.com/
-  repo_dir: /cpfs/zhuzijie/wuji-ego-pipeline-train
+  workspace_id: "REPLACE_ME"
+  resource_id: "REPLACE_ME"
+  image: "REPLACE_ME"
+  cpfs_uri: "bmcpfs://REPLACE_ME/"
+  repo_dir: "/workspace/wuji-ego-mint"
   nnodes: 8
   gpus_per_node: 8
   worker_cpu: 184
   worker_memory: 1800Gi
   worker_shared_memory: 1800Gi
-  conda_env: pipeline_train
-  job_name: zhuzijie-egodistill-image-hand
+  conda_env: mint
+  job_name: mint-stage1

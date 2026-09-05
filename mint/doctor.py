@@ -105,7 +105,7 @@ def run_checks(profile: str) -> list[Check]:
         checks.extend([_module("accelerate"), _module("decord"), _module("pyarrow")])
     if profile in {"data", "full"}:
         checks.extend([_module("ray"), _module("joblib"), _module("ultralytics")])
-        for name in ("GeoCalib", "MoGe", "mega-sam", "HaWoR"):
+        for name in ("GeoCalib", "MoGe", "mega-sam"):
             path = PROJECT_DIR / "third_party" / name
             checks.append(Check(
                 f"backend:{name}", path.is_dir(),
@@ -115,16 +115,6 @@ def run_checks(profile: str) -> list[Check]:
             "GeoCalib weights": PROJECT_DIR / "model" / "geocalib" / "pinhole.tar",
             "MoGe weights": PROJECT_DIR / "model" / "moge2" / "model.pt",
             "Mega-SAM weights": PROJECT_DIR / "model" / "megasam" / "megasam_final.pth",
-            "HaWoR weights": PROJECT_DIR / "model" / "hawor" / "hawor.ckpt",
-            "HaWoR config": PROJECT_DIR / "model" / "hawor" / "model_config.yaml",
-            "HaWoR detector": PROJECT_DIR / "model" / "hawor" / "detector.pt",
-            "DROID-SLAM weights": (
-                PROJECT_DIR / "third_party" / "HaWoR" / "weights" / "external" / "droid.pth"
-            ),
-            "Metric3D weights": (
-                PROJECT_DIR / "third_party" / "HaWoR" / "thirdparty" / "Metric3D"
-                / "weights" / "metric_depth_vit_large_800k.pth"
-            ),
         }
         for name, path in assets.items():
             detail = str(path.relative_to(PROJECT_DIR))

@@ -82,14 +82,15 @@ const ICRA_CAMERA_LIVE_VALUES = {
   pathScale: 'path_scale', atePct: 'ATE_S_pct',
 };
 
+// Table 2 of the 2026-09-05 manuscript; MegaSaM HOT3D coverage corrected to 27/27.
 const ICRA_HOT3D_CAMERA_ROWS = [
   {method: 'DROID-SLAM', values: ['27/27', 49.1, 39.6, 5.36, 3.52, 0.227, 0.146, 0.778, 0.36]},
   {method: 'HaWoR', values: ['27/27', 200.3, 179.2, 8.60, 7.33, 1.098, 0.928, 0.950, 1.28]},
   {method: 'InfiniteVGGT', values: ['27/27', 124.8, 100.0, 13.52, 9.67, 1.492, 0.392, 0.556, 0.80]},
   {method: 'LingBot-Map', values: ['27/27', 85.5, 51.0, 7.56, 6.18, 0.684, 0.253, 0.712, 0.55]},
-  {method: 'MegaSaM†', values: ['24/27', 94.4, 65.3, 3.18, 2.13, 0.082, 0.063, 0.716, 0.69]},
+  {method: 'MegaSaM†', values: ['27/27', 94.4, 65.3, 3.18, 2.13, 0.082, 0.063, 0.716, 0.69]},
+  {method: 'MINT（未微调相机轨迹）', values: ['27/27', 524.7, 434.6, 8.75, 8.37, 0.234, 0.229, 0.466, 3.29]},
   {method: 'MINT（相机轨迹二阶段微调）', values: ['27/27', 181.7, 155.5, 4.69, 4.78, 0.284, 0.259, 1.094, 1.15]},
-  {method: 'MINT（未微调相机轨迹）', values: ['27/27', 291.6, 284.0, 4.78, 4.79, 0.324, 0.301, 1.045, 1.89]},
 ];
 
 const ICRA_ARCTIC_CAMERA_ROWS = [
@@ -98,8 +99,8 @@ const ICRA_ARCTIC_CAMERA_ROWS = [
   {method: 'InfiniteVGGT', values: ['34/34', 79.0, 69.1, 16.21, 12.63, 1.265, 0.655, 0.284, 3.23]},
   {method: 'LingBot-Map', values: ['34/34', 59.6, 62.0, 9.17, 8.47, 0.980, 0.717, 0.591, 2.46]},
   {method: 'MegaSaM†', values: ['34/34', 51.4, 50.4, 8.73, 5.58, 0.779, 0.725, 1.956, 2.15]},
+  {method: 'MINT（未微调相机轨迹）', values: ['34/34', 63.7, 59.3, 3.53, 3.62, 0.251, 0.243, 0.755, 2.63]},
   {method: 'MINT（相机轨迹二阶段微调）', values: ['34/34', 81.9, 83.2, 3.39, 3.37, 0.256, 0.251, 1.412, 3.40]},
-  {method: 'MINT（未微调相机轨迹）', values: ['34/34', 728.6, 506.1, 71.01, 58.60, 6.039, 4.976, 0.690, 28.94]},
 ];
 
 const VIDIHAND_COLUMNS = [
@@ -340,7 +341,7 @@ const BENCHMARK_SUITES = Object.freeze({
   hot3d_camera: {
     id: 'hot3d_camera',
     label: 'HOT3D 相机表',
-    description: '本项目在统一数据、预处理和 SE(3)-only 指标实现下自行实测的 HOT3D 全长相机轨迹横表。',
+    description: '论文 Table 2 的 HOT3D 全长相机轨迹参考值，以及本次 checkpoint 的评测结果。',
     datasets: [
       {name: 'camera_hot3d', label: 'HOT3D · 全长相机轨迹', note: '27 条 · 94,978 帧',
        purpose: '使用去畸变针孔 JPEG 与逐帧 Aria MPS 公制 c2w；每条完整视频只做一次 SE(3) 对齐，统计序列级均值与中位数。'},
@@ -351,13 +352,13 @@ const BENCHMARK_SUITES = Object.freeze({
       stages: [
         {label: '输入与前向', text: '使用序列目录中的已去畸变 pinhole images、meta.json 原始 H/W，以及训练 run 自带 config；不做测试时调参，不把数千帧视频强行整段单次前向。'},
         {label: '轨迹对齐', text: '每条完整预测轨迹与 GT 只拟合一次 Umeyama SE(3) 的旋转和平移；scale 固定为 1，ATE 与 RPE-T 都不吸收预测尺度。'},
-        {label: '数据集聚合', text: '先逐序列计算 RMSE，再对 27 条序列等权计算均值与中位数；推理失败、缺帧或非有限轨迹进入覆盖率，不静默剔除。'},
+        {label: '数据集聚合', text: '先逐序列计算 RMSE，再对成功完成评测的序列等权计算均值与中位数；覆盖率分母保留全部 27 条序列，失败序列不填入有限误差值。'},
       ],
       datasets: [
         {label: 'GT', text: 'HOT3D rectified validation export；GT 为逐帧公制 camera-to-world，图像和轨迹严格同帧。'},
-        {label: '方法行', text: 'DROID-SLAM、HaWoR、InfiniteVGGT、LingBot-Map、MegaSaM 与两个 MINT checkpoint 的固定数值均由本项目在同一清单和同一指标实现下实际运行得到，不是引用论文表格。'},
+        {label: '方法行', text: '固定方法行与误差指标摘录自论文 Table 2，MegaSaM 覆盖率已更正为 27/27；本次 checkpoint 的实际评测结果另行追加。比较前应核对评测清单、预处理、对齐与聚合设置。'},
       ],
-      warning: 'DROID-SLAM、InfiniteVGGT、LingBot-Map 不声明公制尺度，因此其不缩放 ATE/弧长比只记录当前输出尺度；MegaSaM 仅成功 24/27，不能把覆盖失败当作不存在。该 validation export 也不等同于论文隐藏 test split。',
+      warning: 'DROID-SLAM、InfiniteVGGT、LingBot-Map 不声明公制尺度，因此其不缩放 ATE/弧长比只记录当前输出尺度。该 validation export 也不等同于论文隐藏 test split。',
     },
     combos: [['camera_trajectory', 'camera_hot3d']],
     liveDatasets: ['camera_hot3d'],
@@ -377,9 +378,9 @@ const BENCHMARK_SUITES = Object.freeze({
       {
         id: 'icra-hot3d-camera-comparison',
         title: 'HOT3D · 全长相机轨迹',
-        source: 'MINT 统一实测 · ICRA full/table.txt · 2026-08-14 · SE(3)-only',
-        referenceKind: 'local-baseline',
-        note: '本表所有固定方法行均由本项目实际运行所得，不是论文引用值。27 条、94,978 帧；长度单位 mm。ATE/RPE 为序列级 RMSE 的均值/中位数，弧长比为 GT/pred。MegaSaM† 表示 no CVD 且仅覆盖 24/27。',
+        source: 'MINT manuscript · Table 2 · 2026-09-05 · SE(3)-only',
+        referenceKind: 'paper',
+        note: '误差指标摘录自论文 Table 2，MegaSaM 覆盖率更正为 27/27。27 条、94,978 帧；长度单位 mm。ATE/RPE 为成功评测序列的 RMSE 均值/中位数，弧长比为 GT/pred。MegaSaM† 表示 no CVD。',
         expectedSequences: 27,
         columns: ICRA_CAMERA_COLUMNS,
         rows: ICRA_HOT3D_CAMERA_ROWS,
@@ -393,7 +394,7 @@ const BENCHMARK_SUITES = Object.freeze({
   arctic_camera: {
     id: 'arctic_camera',
     label: 'ARCTIC 相机表',
-    description: '本项目在统一数据、预处理和 SE(3)-only 指标实现下自行实测的 ARCTIC 全长相机轨迹横表。',
+    description: '论文 Table 2 的 ARCTIC 全长相机轨迹参考值，以及本次 checkpoint 的评测结果。',
     datasets: [
       {name: 'camera_arctic', label: 'ARCTIC · 全长相机轨迹', note: 'P2 val · 34 条 · 25,883 帧',
        purpose: '使用 ARCTIC s05 protocol P2 validation 的完整 egocentric 操作序列和公制 c2w；不使用 P1 的 81 帧 hand-coverage 切片。'},
@@ -408,7 +409,7 @@ const BENCHMARK_SUITES = Object.freeze({
       ],
       datasets: [
         {label: 'GT', text: 'ARCTIC protocol P2 validation，subject s05，34 条完整操作序列；共 25,883 帧。'},
-        {label: '方法行', text: 'DROID-SLAM、HaWoR、InfiniteVGGT、LingBot-Map、MegaSaM 与两个 MINT checkpoint 的固定数值均由本项目在同一清单和同一指标实现下实际运行得到，不是引用论文表格。'},
+        {label: '方法行', text: '固定方法行与数值摘录自论文 Table 2；本次 checkpoint 的实际评测结果另行追加。比较前应核对评测清单、预处理、对齐与聚合设置。'},
         {label: '与 ViDiHand 区别', text: 'ViDiHand 面板使用 P1 validation 的 81 帧相机系手部 coverage 协议；本面板只评完整相机轨迹，不能混用结果或输入。'},
       ],
       warning: 'DROID-SLAM、InfiniteVGGT、LingBot-Map 的输出本身没有公制度量保证；它们的 ATE/弧长比按当前尺度记录。这里只能在相同 P2 export、预处理和 whole-sequence SE(3)-only 指标下横向比较。',
@@ -431,9 +432,9 @@ const BENCHMARK_SUITES = Object.freeze({
       {
         id: 'icra-arctic-camera-comparison',
         title: 'ARCTIC · 全长相机轨迹',
-        source: 'MINT 统一实测 · ICRA full/table.txt · 2026-08-14 · SE(3)-only',
-        referenceKind: 'local-baseline',
-        note: '本表所有固定方法行均由本项目实际运行所得，不是论文引用值。P2 validation s05，34 条、25,883 帧；长度单位 mm。ATE/RPE 为序列级 RMSE 的均值/中位数，弧长比为 GT/pred。MegaSaM† 表示 no CVD。',
+        source: 'MINT manuscript · Table 2 · 2026-09-05 · SE(3)-only',
+        referenceKind: 'paper',
+        note: '固定结果摘录自论文 Table 2。P2 validation s05，34 条、25,883 帧；长度单位 mm。ATE/RPE 为成功评测序列的 RMSE 均值/中位数，弧长比为 GT/pred。MegaSaM† 表示 no CVD。',
         expectedSequences: 34,
         columns: ICRA_CAMERA_COLUMNS,
         rows: ICRA_ARCTIC_CAMERA_ROWS,

@@ -2,7 +2,7 @@
 
 <!--
   完整宣传片（1 分 49 秒）—— 这里暂时特意不放播放入口。文件已入库，位于
-  assets/readme/full_film.mp4（1280 × 720，8.5 MB）；指向它的普通链接已被移除，
+  docs/asset/full_film.mp4（1280 × 720，8.5 MB）；指向它的普通链接已被移除，
   因为「点开跳到 blob 页面」的链接不算播放器。
 
   真正的内嵌播放器只对 github.com/user-attachments 链接渲染，而这种链接只能通过
@@ -16,9 +16,9 @@
   特意不入库）。
 -->
 
-<img src="assets/readme/scale.webp" width="100%" alt="108 个 MINT 渲染片段同时播放，每格一个片段">
+<img src="docs/asset/scale.webp" width="100%" alt="108 个 MINT 渲染片段同时播放，每格一个片段">
 
-<h2>MINT：用可扩展的第一视角管线监督<br>训练世界坐标系相机与手部运动的统一模型</h2>
+<h2>MINT：基于可扩展第一视角管线监督的<br>世界坐标系相机与手部运动估计统一模型</h2>
 
 Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Yizhou Wang<sup>1,3</sup> &nbsp;·&nbsp; Zhenjie Yang<sup>4</sup> &nbsp;·&nbsp; Yide Liu<sup>3,5</sup> &nbsp;·&nbsp; Jiahao Chen<sup>3,\*</sup> &nbsp;·&nbsp; Guanqi He<sup>2,3,\*</sup>
 
@@ -37,23 +37,23 @@ Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Y
 
 </div>
 
-<img src="assets/readme/world_space.webp" width="100%" alt="八宫格：第一视角、世界坐标系、MuJoCo 重定向三种空间下的设备真值与 MINT 预测对照">
+<img src="docs/asset/world_space.webp" width="100%" alt="八宫格：第一视角、世界坐标系、MuJoCo 重定向三种空间下的设备真值与 MINT 预测对照">
 
 ---
 
-### 🤲 认识 MINT —— 让世界坐标系下的第一视角手部数据，人人都产得起
+### 🤲 认识 MINT —— 让世界坐标系下的第一视角运动数据更易获取
 
-戴相机的人在屋子里怎么走动、两只手到过哪些位置做了什么 —— 要的是它们在真实空间里的位置，不是画面里的像素位置。今天要拿到它，得买带 SLAM 的采集设备，或者把相机标定 → 单目深度 → SLAM → 手部重建 → 轨迹清理串成一条链：每一级一份权重、一类失败、一条许可证限制。于是产出这类数据的能力集中在少数跑得起这条链的实验室手里，而具身智能最缺的恰恰是海量真实人手数据。
+第一视角运动重建需要估计相机如何移动，以及双手在周围空间中的位置、姿态与运动。获取这类数据，通常需要具备定位能力的采集设备，或将相机标定、单目深度、SLAM、手部重建与轨迹清理串成一条处理管线。多个模型的部署、阶段间的误差传递，以及不同的使用许可，都增加了规模化数据生产与维护的成本。
 
-MINT 把这条链换掉：**一段普通 RGB 视频、一张 24 GB 显存的显卡、一次前向**，直接得到世界坐标系下的相机与双手运动。有视频，就能产数据。
+**MINT 以普通第一视角 RGB 视频为输入，通过统一模型预测相机与双手运动，并组合为世界坐标系下的结构化输出。** 使用者可通过 Web Viewer 运行推理并查看结果，模型推理需要显存至少为 24 GB 的 NVIDIA GPU。长视频采用分窗处理，并在窗口之间拼接相机轨迹。
 
-- **一个统一模型，而不是五级串行链。** 共享的时空表征同时驱动四个头 —— 相机外参、视场角、相机坐标系 MANO、逐帧手部存在性 —— 再由显式可微的刚体组合得到世界坐标系手部运动。推理时不产生任何稠密 3D 中间结果。
-- **结构化管线摊销（structured pipeline amortization）。** 多级管线留在线下，只作监督信号的生成器，再用一个模型去学它最终那份结构化状态 —— 这不是 logit 蒸馏，学的是一整套非端到端系统的相机–手部状态。跑这套系统的代价由我们付一次，而不是每个使用者各付一次。
-- **端到端开源。** 模型权重、训练与推理代码、EgoPipeline 标注系统，以及经过严格过滤的 **1,021 小时**结构化第一视角数据集 —— 可复现、可审查、可以自己接着改，而不是一个只能调用的服务。
+- **统一建模相机与双手。** 共享的时空表征驱动四个预测头，分别估计相机外参、视场角、相机坐标系 MANO 参数与逐帧手部存在性，再通过显式刚体变换得到世界坐标系手部运动。推理时无需生成深度图或点云。
+- **结构化管线摊销（structured pipeline amortization）。** EgoPipeline 在线下生成结构化的相机与手部监督，MINT 学习这些标签，从而减少处理新视频时对多个独立模型的部署依赖。
+- **开放模型与研究资源。** 项目提供模型权重、训练与推理代码、覆盖 **1,021 小时**第一视角视频的非视频结构化标注，以及 EgoPipeline 调度、清理与导出的参考源码。原始视频和需单独授权的资产仍须按各自的访问与许可条款获取。
 
-<img src="assets/readme/pipeline_vs_mint.webp" width="100%" alt="同一批帧分别经过传统 ego 管线和 MINT：管线把两只手都放错了位置，MINT 保持贴合">
+<img src="docs/asset/pipeline_vs_mint.webp" width="100%" alt="同一批帧分别经过传统 ego 管线和 MINT：管线把两只手都放错了位置，MINT 保持贴合">
 
-<div align="center"><sub>同一批帧，同一套叠加渲染。左：输入。中：传统 ego 管线，其输出是<b>伪标签，不是真值</b>。右：MINT，一次前向。</sub></div>
+<div align="center"><sub>同一批帧，同一套叠加渲染。左：输入。中：传统 ego 管线，其输出是<b>伪标签，不是真值</b>。右：MINT 预测。</sub></div>
 
 ---
 
@@ -69,7 +69,7 @@ MINT 把这条链换掉：**一段普通 RGB 视频、一张 24 GB 显存的显�
 - [📦 功能范围](#-功能范围)
 - [🏋️ 模型训练与可选管线复现](#️-模型训练与可选管线复现)
 - [🗂️ 公开 Ego 预训练数据](#️-公开-ego-预训练数据)
-- [⚠️ 已知局限](#️-已知局限)
+- [⚠️ 局限与未来工作](#️-局限与未来工作)
 - [🧾 仓库结构](#-仓库结构)
 - [📚 文档](#-文档)
 - [✨ 致谢](#-致谢)
@@ -84,7 +84,7 @@ MINT 把这条链换掉：**一段普通 RGB 视频、一张 24 GB 显存的显�
 
 | | 内容 | 位置 |
 | :-- | :-- | :-- |
-| ✅ | MINT checkpoint，11.31 亿参数 | [Hugging Face](https://huggingface.co/ZZJAsher/mint_v1) · [ModelScope](https://www.modelscope.cn/models/AsherZhu/mint_v1) |
+| ✅ | MINT checkpoint，总参数量 1.139B | [Hugging Face](https://huggingface.co/ZZJAsher/mint_v1) · [ModelScope](https://www.modelscope.cn/models/AsherZhu/mint_v1) |
 | ✅ | 推理、Web Viewer、训练代码 | 本仓库 |
 | ✅ | 1,021 小时结构化第一视角数据集（非视频部分） | [Hugging Face](https://huggingface.co/datasets/ZZJAsher/wuji_ego_mint) · [ModelScope](https://www.modelscope.cn/datasets/AsherZhu/wuji_ego_mint) |
 | ✅ | Benchmark 实现与 CLI，已接入 Viewer | `eval/model_effect/benchmark/` |
@@ -140,7 +140,7 @@ Viewer 启动后会自动在默认浏览器打开 `http://127.0.0.1:8011`，然�
 4. 点击 **开始推理**。
 5. 查看同步的 GT/Pred 2D、固定世界和当前相机 3D、逐帧数值、loss、导出及可选 benchmark 工具。导出菜单既可把所选画面合成一支网格 MP4，也可将 2D、固定世界 3D、MuJoCo 和 Wuji Hand 的 GT/PRED 结果分别导出为 8 支独立 MP4，并打包为 ZIP 下载。
 
-![MINT Web Viewer 加载模型并完成推理后的界面](data/samples/mint-web-viewer.png)
+![MINT Web Viewer 加载模型并完成推理后的界面](docs/asset/mint-web-viewer.png)
 
 **要测试自己的视频**，不需要改配置、也不需要走命令行：在 Viewer 右下方的输入目录里浏览到视频所在路径，点击选中即可。支持的格式为 `.mp4`、`.mov`、`.avi`、`.mkv`、`.webm`。裸视频没有真值，Viewer 会进入纯预测模式 —— GT 面板、GT/Pred 并排布局与 loss 读数都会隐藏，画面上的全部内容都是预测结果。
 
@@ -148,11 +148,11 @@ Viewer 启动后会自动在默认浏览器打开 `http://127.0.0.1:8011`，然�
 
 ## 🧠 MINT 是怎么工作的
 
-<img src="assets/readme/figure_teaser.webp" width="100%" alt="总览：左侧大规模第一视角视频，中间 MINT 与数据多样性对比，右侧零样本世界坐标系输出">
+<img src="docs/asset/figure_teaser.webp" width="100%" alt="总览：左侧大规模第一视角视频，中间 MINT 与数据多样性对比，右侧零样本世界坐标系输出">
 
-<div align="center"><sub>左侧：本次发布的监督数据 —— <b>1,021 小时</b>、<b>56 万</b> episode 的第一视角视频，以及它与 EgoDex、Ego4D、EPIC-KITCHENS 在多样性上的对比。右侧：一段未见过的视频单次前向通过 MINT 的结果 —— 世界坐标系相机与手部轨迹、MANO 手，以及重定向到机器人手的同一段运动。</sub></div>
+<div align="center"><sub>左侧：本次发布的监督数据 —— <b>1,021 小时</b>、<b>56 万</b> episode 的第一视角视频，以及它与 EgoDex、Ego4D、EPIC-KITCHENS 在多样性上的对比。右侧：MINT 对一段未见过的视频的预测 —— 世界坐标系相机与手部轨迹、MANO 手，以及重定向到机器人手的同一段运动。</sub></div>
 
-每帧只编码一次，四个头分工预测，再用显式刚体变换组合到世界坐标系 —— 于是世界坐标系下的误差会同时更新相机分支和手部分支。
+每个窗口内，四个预测头共享时空表征，分别预测相机与手部状态，再通过显式刚体变换组合为世界坐标系下的运动。
 
 ### 模型速览
 
@@ -161,7 +161,7 @@ Viewer 启动后会自动在默认浏览器打开 `http://127.0.0.1:8011`，然�
 | **输入** | 单目第一视角 RGB，378 × 518，patch 14，每帧 999 token |
 | **骨干** | LingBot-Map / GCT —— 24 组帧内注意力与全局注意力交替 |
 | **片段** | T = 32 帧，重新锚定到窗口自身的第一帧 |
-| **参数量** | 11.31 亿（可训练） |
+| **总参数量** | 1.139B |
 | **头 01** | 相机外参，7 维 `[t, q]`，因果迭代精化 4 步 |
 | **头 02** | 视场角，`f_h, f_w`，独立时序分支 + Softplus |
 | **头 03** | 相机坐标系手部 MANO，218 维，左右手，部件查询 + 2 次精化 |
@@ -170,7 +170,7 @@ Viewer 启动后会自动在默认浏览器打开 `http://127.0.0.1:8011`，然�
 | **推理时** | 不出深度图、不出点云、无稠密 3D 中间结果 |
 | **训练** | Stage 1 在 1,021 小时管线监督上预训练 → Stage 2 用小规模高精度轨迹数据校正相机轨迹，几何编码器与手部、存在性、视场角模块保持冻结 |
 
-<img src="assets/readme/figure_egopipeline.webp" width="100%" alt="EgoPipeline 各级：手部检测与帧过滤，GeoCalib / MoGe-2 / MegaSaM 相机位姿估计，HaWoR 手部重建，以及离群剔除、插值、时序平滑与世界坐标变换">
+<img src="docs/asset/figure_egopipeline.webp" width="100%" alt="EgoPipeline 各级：手部检测与帧过滤，GeoCalib / MoGe-2 / MegaSaM 相机位姿估计，HaWoR 手部重建，以及离群剔除、插值、时序平滑与世界坐标变换">
 
 <div align="center"><sub>EgoPipeline stages.</sub></div>
 
@@ -191,9 +191,9 @@ Viewer 启动后会自动在默认浏览器打开 `http://127.0.0.1:8011`，然�
 
 ### 为什么用一个模型替掉整条链
 
-<img src="assets/readme/teaser.webp" width="100%" alt="单次前向输出的三宫格：第一视角 MANO 叠加、世界坐标系下的相机与双手轨迹、以及重定向到 MuJoCo 中的 Wuji 灵巧手">
+<img src="docs/asset/teaser.webp" width="100%" alt="MINT 预测的三种视图：第一视角 MANO 叠加、世界坐标系下的相机与双手轨迹、以及重定向到 MuJoCo 中的 Wuji 灵巧手">
 
-串行链有一些靠工程优化消不掉的结构性代价：每一级都要把同一段视频重新编码一次；相机和手部只在后处理里才相遇；每一级的上限都被它前面那一级锁死；任何一个算子退化，整条记录都会退化。
+多级管线通常需要组合多个视觉模型与后处理组件。不同模型可能对同一段视频分别提取特征，中间估计的误差可能跨阶段传播，部署时也需要协调多套依赖与接口。MINT 让相机与手部预测共享时空表征，从而减少处理新视频时的重复特征提取与组件集成工作。
 
 推理吞吐，在 **RTX 4090D** 上实测，512 × 384、30 fps，条件完全一致；时间是**稳态下的每帧边际成本**。加速比以 **VITRA** 为基准 —— 本项目的数据管线 **EgoPipeline** 就是在它的基础上优化来的。表里的三个方法是同一条路线上的三个点：VITRA 起步，EgoPipeline 是管线级优化，MINT 用一个模型替掉整条链。
 
@@ -220,7 +220,7 @@ Viewer 启动后会自动在默认浏览器打开 `http://127.0.0.1:8011`，然�
 </tbody>
 </table>
 
-和传统管线相比，MINT 单卡快 **17.4 倍**（VITRA 1260.0 → 72.4 ms/帧），四卡快 **12.5 倍**（283.3 → 22.7 ms/帧）。四卡这一组能看出增益来自哪里：把传统管线本身优化一遍（EgoPipeline）占 3.4×（283.3 → 83.4），换成统一模型再压到 22.7。四卡下只有 MINT 跑过了 30 fps 实时线（44.1 fps）。
+和传统管线相比，MINT 单卡快 **17.4 倍**（VITRA 1260.0 → 72.4 ms/帧），四卡快 **12.5 倍**（283.3 → 22.7 ms/帧）。四卡这一组能看出增益来自哪里：把传统管线本身优化一遍（EgoPipeline）占 3.4×（283.3 → 83.4），换成统一模型再压到 22.7。
 
 EgoPipeline 自己也做过分布式优化（Ray 多卡算子、常驻 worker、异步 CPU 阶段）：串行单卡改成 4 卡调度的 worker 池，270 帧的墙钟时间从 179.0 秒降到 63.9 秒，管线内部 **2.8×**。那是含解码与落盘的整段墙钟，和上表的稳态边际成本不是一个口径，两个数字不能相乘。
 
@@ -228,7 +228,11 @@ EgoPipeline 自己也做过分布式优化（Ray 多卡算子、常驻 worker、
 
 ### 相机系下的双手重建
 
-**MINT 在两个 benchmark 上都是零样本** —— 训练时从没见过它们。ViDiHand（标 `*`）在这两个 benchmark 的大部分数据上训练过，所以它**只列作参考**，评判谁最好时不算它；加粗标的是其余各行中的最优值。`MINT + UKF` 是同一个模型，只是推理时打开了滤波，别的都没变。
+**结果来源：表中除 MINT 与 MINT + UKF 外，所有方法的评测结果均引自 ViDiHand 评测。** MINT 与 MINT + UKF 的结果采用本项目[论文](https://1847540790.github.io/mint-project-page/assets/paper/mint-paper.pdf) Table 1 中的报告值。
+
+评测采用论文 Sec. V-A 所述的 coverage-aware 协议：漏检的手不会被排除，而是按标准 MANO 占位手模型的误差计入位姿指标。FAcc、Recall 和 F1 衡量检测表现，MPJPE-p 与 PA-MPJPE-p 衡量关节姿态，GO-p 与 CT-p 衡量手腕朝向和手部位置，Jitter 衡量时序平滑性。
+
+MINT 在 HOT3D 和 ARCTIC 上采用零样本评测设置，其两个训练阶段均未使用上述数据集。由于 ViDiHand（标记为 `*`）的训练数据包含上述两个基准数据集中的大部分数据，其结果仅作为域内参考，不纳入零样本方法的直接比较。`MINT + UKF` 使用与 MINT 相同的模型权重，并在推理阶段应用无迹卡尔曼滤波（UKF），其余评测设置保持一致。
 
 <table>
 <thead>
@@ -255,14 +259,14 @@ EgoPipeline 自己也做过分布式优化（Ray 多卡算子、常驻 worker、
 <tr><td align="left">InterWild</td><td align="right">0.878</td><td align="right">0.943</td><td align="right">0.959</td><td align="right">30.82</td><td align="right">15.95</td><td align="right">25.39</td><td align="right">0.097</td><td align="right">46.58</td></tr>
 <tr><td align="left">HaMeR</td><td align="right">0.875</td><td align="right">0.943</td><td align="right">0.957</td><td align="right">29.20</td><td align="right">14.60</td><td align="right">24.91</td><td align="right">0.095</td><td align="right">18.28</td></tr>
 <tr><td align="left">Hamba</td><td align="right">0.833</td><td align="right">0.912</td><td align="right">0.941</td><td align="right">31.23</td><td align="right">17.17</td><td align="right">27.82</td><td align="right">0.110</td><td align="right">15.36</td></tr>
-<tr><td align="left">WildHands</td><td align="right">0.879</td><td align="right">0.946</td><td align="right">0.960</td><td align="right">25.70</td><td align="right">13.94</td><td align="right">22.32</td><td align="right"><b>0.058</b></td><td align="right">12.97</td></tr>
+<tr><td align="left">WildHands</td><td align="right">0.879</td><td align="right">0.946</td><td align="right">0.960</td><td align="right">25.70</td><td align="right">13.94</td><td align="right">22.32</td><td align="right">0.058</td><td align="right">12.97</td></tr>
 <tr><td align="left">OmniHands</td><td align="right">0.866</td><td align="right">0.949</td><td align="right">0.954</td><td align="right">29.67</td><td align="right">14.20</td><td align="right">24.58</td><td align="right">0.087</td><td align="right">45.31</td></tr>
-<tr><td align="left">WiLoR</td><td align="right"><b>0.919</b></td><td align="right">0.951</td><td align="right">0.974</td><td align="right"><b>22.01</b></td><td align="right"><b>11.87</b></td><td align="right"><b>17.36</b></td><td align="right">0.075</td><td align="right">24.09</td></tr>
+<tr><td align="left">WiLoR</td><td align="right">0.919</td><td align="right">0.951</td><td align="right">0.974</td><td align="right">22.01</td><td align="right">11.87</td><td align="right">17.36</td><td align="right">0.075</td><td align="right">24.09</td></tr>
 <tr><td align="left">Dyn-HaMR</td><td align="right">0.842</td><td align="right">0.918</td><td align="right">0.951</td><td align="right">27.90</td><td align="right">17.02</td><td align="right">25.95</td><td align="right">0.121</td><td align="right">12.84</td></tr>
 <tr><td align="left">HaWoR</td><td align="right">0.700</td><td align="right">0.817</td><td align="right">0.895</td><td align="right">45.36</td><td align="right">26.38</td><td align="right">43.33</td><td align="right">0.149</td><td align="right">19.79</td></tr>
 <tr><td align="left"><i>ViDiHand*</i></td><td align="right"><i>0.997</i></td><td align="right"><i>0.999</i></td><td align="right"><i>0.999</i></td><td align="right"><i>21.67</i></td><td align="right"><i>9.82</i></td><td align="right"><i>14.64</i></td><td align="right"><i>0.047</i></td><td align="right"><i>3.18</i></td></tr>
-<tr><td align="left">MINT</td><td align="right">0.916</td><td align="right"><b>0.957</b></td><td align="right"><b>0.978</b></td><td align="right">51.03</td><td align="right">27.71</td><td align="right">24.19</td><td align="right">0.140</td><td align="right">12.26</td></tr>
-<tr><td align="left">MINT + UKF</td><td align="right">0.916</td><td align="right"><b>0.957</b></td><td align="right"><b>0.978</b></td><td align="right">51.09</td><td align="right">27.70</td><td align="right">24.22</td><td align="right">0.140</td><td align="right"><b>2.54</b></td></tr>
+<tr><td align="left">MINT</td><td align="right">0.916</td><td align="right">0.957</td><td align="right">0.978</td><td align="right">51.03</td><td align="right">27.71</td><td align="right">24.19</td><td align="right">0.140</td><td align="right">12.26</td></tr>
+<tr><td align="left">MINT + UKF</td><td align="right">0.916</td><td align="right">0.957</td><td align="right">0.978</td><td align="right">51.09</td><td align="right">27.70</td><td align="right">24.22</td><td align="right">0.140</td><td align="right">2.54</td></tr>
 <tr><th colspan="9" align="left">HOT3D</th></tr>
 <tr><td align="left">InterWild</td><td align="right">0.669</td><td align="right">0.881</td><td align="right">0.868</td><td align="right">77.17</td><td align="right">24.81</td><td align="right">58.50</td><td align="right">0.213</td><td align="right">101.16</td></tr>
 <tr><td align="left">HaMeR</td><td align="right">0.692</td><td align="right">0.904</td><td align="right">0.883</td><td align="right">68.31</td><td align="right">21.46</td><td align="right">49.64</td><td align="right">0.102</td><td align="right">23.63</td></tr>
@@ -273,20 +277,18 @@ EgoPipeline 自己也做过分布式优化（Ray 多卡算子、常驻 worker、
 <tr><td align="left">Dyn-HaMR</td><td align="right">0.614</td><td align="right">0.811</td><td align="right">0.802</td><td align="right">74.21</td><td align="right">38.20</td><td align="right">43.85</td><td align="right">0.571</td><td align="right">44.94</td></tr>
 <tr><td align="left">HaWoR</td><td align="right">0.348</td><td align="right">0.499</td><td align="right">0.654</td><td align="right">71.40</td><td align="right">66.03</td><td align="right">79.35</td><td align="right">0.262</td><td align="right">23.87</td></tr>
 <tr><td align="left"><i>ViDiHand*</i></td><td align="right"><i>0.948</i></td><td align="right"><i>0.974</i></td><td align="right"><i>0.983</i></td><td align="right"><i>21.51</i></td><td align="right"><i>11.38</i></td><td align="right"><i>15.83</i></td><td align="right"><i>0.040</i></td><td align="right"><i>3.74</i></td></tr>
-<tr><td align="left">MINT</td><td align="right"><b>0.940</b></td><td align="right"><b>0.977</b></td><td align="right"><b>0.950</b></td><td align="right"><b>23.61</b></td><td align="right">10.70</td><td align="right">16.78</td><td align="right"><b>0.073</b></td><td align="right">11.52</td></tr>
-<tr><td align="left">MINT + UKF</td><td align="right"><b>0.940</b></td><td align="right"><b>0.977</b></td><td align="right"><b>0.950</b></td><td align="right">23.62</td><td align="right"><b>10.69</b></td><td align="right"><b>16.77</b></td><td align="right"><b>0.073</b></td><td align="right"><b>2.39</b></td></tr>
+<tr><td align="left">MINT</td><td align="right">0.940</td><td align="right">0.977</td><td align="right">0.950</td><td align="right">23.61</td><td align="right">10.70</td><td align="right">16.78</td><td align="right">0.073</td><td align="right">11.52</td></tr>
+<tr><td align="left">MINT + UKF</td><td align="right">0.940</td><td align="right">0.977</td><td align="right">0.950</td><td align="right">23.62</td><td align="right">10.69</td><td align="right">16.77</td><td align="right">0.073</td><td align="right">2.39</td></tr>
 </tbody>
 </table>
 
-在 **HOT3D** 上，除了只作参考的 ViDiHand，MINT 在检测三项以及 MPJPE-p、PA-MPJPE-p、GO-p、CT-p 上都是表里最好的，`MINT + UKF` 的 jitter 更是全表最低。在 **ARCTIC** 上，它在相机系下的关节误差明显落后于那些只做手部重建的专用方法 —— 原因是这版 checkpoint 的手部分支只在 EgoPipeline 产出的粗糙标签上训练过，从未用高精度手部数据微调，所以它的手部精度跟随的是这批标签的质量。
+论文报告的 MINT 在 **HOT3D** 上达到 23.61 mm MPJPE-p 和 10.70 mm PA-MPJPE-p，在 **ARCTIC** 上对应为 51.03 mm 和 27.71 mm。应用 UKF 后，HOT3D 的 Jitter 从 11.52 降至 2.39 mm/frame²，ARCTIC 从 12.26 降至 2.54 mm/frame²，同时 MPJPE-p 与 PA-MPJPE-p 的变化均小于 0.1 mm。目前手部预测头尚未在高精度数据上微调，相关局限与后续方向见[局限与未来工作](#️-局限与未来工作)。
 
-**真正检验这个思路的是 HaWoR 那一行。** HaWoR 是上游的第三方工作，EgoPipeline 在第 04 级调用它产出相机系 MANO —— 因此本版 checkpoint 训练时用到的全部手部标签都由它生成，它是这里的教师。一个在伪标签上训练的学生，本不该指望打败生成这些标签的流程；能追平，就是这里要的结果。而 MINT 追平并超过了它：在 ARCTIC 上，全局朝向（24.19 对 43.33 度）与平移（0.140 对 0.149 m）都更好，Procrustes 对齐后的关节误差相当（27.71 对 26.38 mm）；在 HOT3D 上，八项指标全部更好，且差距很大（MPJPE-p 23.61 对 71.40 mm，F1 0.950 对 0.654）。一个统一模型、一次前向，复现了它所蒸馏的那条串行链的结构化输出。
-
-这也说明剩下的差距是**数据问题，不是结构问题**。相机系手部精度的天花板来自伪标签质量，而不是模型本身：同一套结构，只要用高精度相机系手部数据微调，就应当得到一个能产出高精度标签的 MINT —— 下一步是这个微调，而不是重新设计模型。
+**HaWoR 为 EgoPipeline 提供手部伪标签。** 管线在第 04 级使用它估计相机坐标系 MANO 参数，为 MINT 的手部分支提供监督。这些标签仍包含重建误差，不能视为高精度真值。
 
 ### 世界系下的相机轨迹
 
-论文 Table 2：HOT3D（27 条序列、94,978 帧）与 ARCTIC P2 验证集（34 条序列、25,883 帧）。序列按**完整长度评测，只做 SE(3) 对齐、不拟合尺度** —— 因此尺度误差会被计入而不是被吸收掉，弧长比就是把它暴露出来的那一列。覆盖率是某个方法实际跑完的序列数：`MegaSaM†` 不带深度精化，且在 HOT3D 最长的 3 条序列上显存溢出。`MINT w/o stage 2` 从未见过米制真值。加粗标的是每列最优值；弧长比的"最优"指最接近 1。
+下表误差指标摘录自[论文](https://1847540790.github.io/mint-project-page/assets/paper/mint-paper.pdf) **Table 2**，MegaSaM 的 HOT3D 覆盖率更正为 27/27：HOT3D（27 条序列、94,978 帧）与 ARCTIC P2 验证集（34 条序列、25,883 帧）。序列按**完整长度评测，只做 SE(3) 对齐、不拟合尺度** —— 因此尺度误差会被计入而不是被吸收掉。弧长比定义为**真值轨迹长度 / 预测轨迹长度（GT / Pred）**，逐序列计算后等权平均：大于 1 表示预测路程偏短，小于 1 表示预测路程偏长。覆盖率是某个方法实际跑完的序列数：`MegaSaM†` 不带深度精化。`MINT w/o stage 2` 从未见过米制真值。加粗标记沿用论文；弧长比的目标为 1。
 
 <table>
 <thead>
@@ -296,7 +298,7 @@ EgoPipeline 自己也做过分布式优化（Ray 多卡算子、常驻 worker、
   <th colspan="2" align="center">ATE ↓ (mm)</th>
   <th colspan="2" align="center">RPE-T ↓ (mm)</th>
   <th colspan="2" align="center">RPE-R ↓ (度)</th>
-  <th rowspan="2" align="right">弧长比<br><sub>→ 1</sub></th>
+  <th rowspan="2" align="right">弧长比<br><sub>GT / Pred → 1</sub></th>
   <th rowspan="2" align="right">ATE ↓<br><sub>%</sub></th>
 </tr>
 <tr>
@@ -314,7 +316,7 @@ EgoPipeline 自己也做过分布式优化（Ray 多卡算子、常驻 worker、
 <tr><td align="left">HaWoR</td><td align="right">27/27</td><td align="right">200.3</td><td align="right">179.2</td><td align="right">8.60</td><td align="right">7.33</td><td align="right">1.098</td><td align="right">0.928</td><td align="right"><b>0.950</b></td><td align="right">1.28</td></tr>
 <tr><td align="left">InfiniteVGGT</td><td align="right">27/27</td><td align="right">124.8</td><td align="right">100.0</td><td align="right">13.52</td><td align="right">9.67</td><td align="right">1.492</td><td align="right">0.392</td><td align="right">0.556</td><td align="right">0.80</td></tr>
 <tr><td align="left">LingBot-Map</td><td align="right">27/27</td><td align="right">85.5</td><td align="right">51.0</td><td align="right">7.56</td><td align="right">6.18</td><td align="right">0.684</td><td align="right">0.253</td><td align="right">0.712</td><td align="right">0.55</td></tr>
-<tr><td align="left">MegaSaM†</td><td align="right">24/27</td><td align="right">94.4</td><td align="right">65.3</td><td align="right"><b>3.18</b></td><td align="right"><b>2.13</b></td><td align="right"><b>0.082</b></td><td align="right"><b>0.063</b></td><td align="right">0.716</td><td align="right">0.69</td></tr>
+<tr><td align="left">MegaSaM†</td><td align="right">27/27</td><td align="right">94.4</td><td align="right">65.3</td><td align="right"><b>3.18</b></td><td align="right"><b>2.13</b></td><td align="right"><b>0.082</b></td><td align="right"><b>0.063</b></td><td align="right">0.716</td><td align="right">0.69</td></tr>
 <tr><td align="left">MINT w/o stage 2</td><td align="right">27/27</td><td align="right">524.7</td><td align="right">434.6</td><td align="right">8.75</td><td align="right">8.37</td><td align="right">0.234</td><td align="right">0.229</td><td align="right">0.466</td><td align="right">3.29</td></tr>
 <tr><td align="left">MINT</td><td align="right">27/27</td><td align="right">181.7</td><td align="right">155.5</td><td align="right">4.69</td><td align="right">4.78</td><td align="right">0.284</td><td align="right">0.259</td><td align="right">1.094</td><td align="right">1.15</td></tr>
 <tr><th colspan="10" align="left">ARCTIC</th></tr>
@@ -328,20 +330,20 @@ EgoPipeline 自己也做过分布式优化（Ray 多卡算子、常驻 worker、
 </tbody>
 </table>
 
-**这里该看 RPE-T 和 RPE-R。** MINT 产出的是训练数据，而训练用的是逐帧的相机运动增量，不是全局坐标系下的绝对位姿。所以传到下游的是相对位姿误差。
+按照论文 Sec. V-A，**ATE 和 ATE% 衡量全局轨迹精度，RPE-T 与 RPE-R 衡量相对运动精度**。RPE 反映局部运动一致性，完整序列的 ATE 则反映长时间跨度下的累计误差，两者共同刻画重建运动的质量。ATE 与 RPE 先逐序列计算 RMSE，再汇总均值与中位数。
 
-**ARCTIC** 上 MINT 的 RPE-T 全表最低（均值 3.39 mm，次优的外部方法 8.73 mm），RPE-R 均值 0.256 也低于所有外部方法（次优 HaWoR 0.298）。**HOT3D** 上 RPE-T 4.69 mm 排第二，仅次于 MegaSaM 的 3.18 mm，而 MegaSaM 27 条只跑完 24 条；这个数据集上的 RPE-R 落后于 MegaSaM 和 DROID-SLAM。
+论文报告的 MINT 在 **ARCTIC** 上 RPE-T 均值为 **3.39 mm**，在 **HOT3D** 上为 **4.69 mm**。专用轨迹估计系统在绝对精度上仍有优势：MINT 采用 32 帧窗口，不包含回环检测与全局优化，处理长序列时可能积累漂移，相关讨论见论文 Sec. V-C。
 
-**ATE 上 MINT 不占优**：HOT3D 181.7 mm，DROID-SLAM 49.1 mm。原因看弧长比：HOT3D 1.094、ARCTIC 1.412，说明预测出的轨迹比真实的长，也就是[已知局限](#️-已知局限)里说的尺度放大。Stage 2 就是修这个的：HOT3D 上它把弧长比从 0.466 拉到 1.094，ATE 从 524.7 mm 降到 181.7 mm。尽管在 ARCTIC 上这一项略有下降，但模型的相机轨迹泛化能力更好。
+**ATE 上 MINT 不占优**：HOT3D 181.7 mm，DROID-SLAM 49.1 mm。按 GT / Pred 的定义，HOT3D 的弧长比 1.094、ARCTIC 的 1.412 表示预测路程偏短。这些 benchmark 预测结果应与公开预训练数据中存在尺度放大的管线轨迹区分开。HOT3D 上，Stage 2 把弧长比从 0.466 拉到 1.094，将原本偏长的路程校正到更接近目标长度，ATE 从 524.7 mm 降到 181.7 mm。ARCTIC 上，弧长比从 0.755 变为 1.412，ATE 则从 63.7 mm 增至 81.9 mm。
 
-### 评测协议
+### 评测协议与结果来源
 
-- **完全留出。** HOT3D 和 ARCTIC 的图像、伪标签和真值，都没参与训练、高精度校准、超参与 loss 权重的选择、checkpoint 的挑选，也不做测试时调参。只有做到这一点，结果才算零样本。
-- **按视频划分。** 官方划分都在切片之前按原始视频 ID 做；有参与者 ID 的，再按参与者隔离一次。
-- **所有方法用同一份输入。** 输入、评测预处理和评测清单完全一致，序列级失败按同一规则计入。不能同时输出相机和手部的方法记 N/A，不拿别的方法的结果去顶替。
-- **唯一的例外会标出来。** 如果某个对比方法用的是它自己在 HOT3D/ARCTIC 上训练过的设置，而不是零样本，这一点会明确标注，不会混进平均值里。
+本 README 的手部重建与相机轨迹表以论文 Table 1 和 Table 2 为依据，MegaSaM 的 HOT3D 覆盖率更正见相机评测部分。非 MINT 方法的手部结果保留其 ViDiHand 评测来源，相机轨迹结果采用 Table 2 注明的完整序列协议。采用相同指标定义，并不意味着不同数据划分或评测清单上的结果可以直接比较。
 
-**Benchmark 结果诚信声明。** 我们承诺，本项目报告的每一项测试指标均为按照所述评测协议实际运行所得的真实结果，不会对原始数值进行任何人为修改。如需精确复现其他方法或 baseline 的具体数值，请直接使用对应方法的官方仓库与原始环境。MINT 使用的指标定义、对齐规则、聚合逻辑和报告代码均公开在 `eval/model_effect/benchmark/` 中，可直接检查具体计算方式。
+- **手部评测。** coverage-aware 协议通过标准 MANO 占位手模型对漏检的真值手施加误差惩罚，位姿指标同时包含真阳性与假阴性。
+- **相机评测。** 每条完整序列只做 SE(3) 对齐，不拟合尺度；ATE 与 RPE 逐序列计算，均值和中位数汇总成功完成评测的序列。
+- **相机覆盖率。** 覆盖率为成功完成评测的序列数除以评测集总序列数。失败序列保留在覆盖率分母中；轨迹误差的均值和中位数仅聚合成功评测且指标有效的序列。
+- **复现条件。** 本地结果与参考值比较前，需要核对 checkpoint、数据划分与评测清单、预处理、对齐及聚合设置是否符合对应实验。MINT 的指标定义与报告代码见 [`eval/model_effect/benchmark/`](eval/model_effect/benchmark/)。
 
 `eval/model_effect/benchmark/` 与对应测试完整开源，并已接入 Viewer 顶栏的 Benchmark 面板。使用前需自行下载 HOT3D 和 ARCTIC，按各 adapter 要求组织数据并安装可选依赖；也可独立运行 CLI：
 
@@ -361,7 +363,7 @@ python eval/model_effect/benchmark/run.py \
 | 推理与可视化 | `python -m mint viewer` | Web 界面查看 LeRobot GT、模型预测、2D/3D 轨迹与逐帧指标。 |
 | 模型训练 | `python -m mint train` | 使用 Accelerate/DDP 训练相机与手部 MINT 模型。 |
 | 模型评测 | `python eval/model_effect/benchmark/run.py` | 运行开源 benchmark CLI；数据集和运行环境由使用者配置。 |
-| 环境检查 | `python -m mint doctor` | 检查依赖、可选后端、模型资产和运行环境。 |
+| 环境检查 | `python -m mint doctor` | 检查软件依赖、模型导入、后端源码和资产文件。 |
 | 管线参考 | `ego_pipeline/` | 在本地整合所需上游后端后，复用已开源的 Ray 调度、接口、轨迹清理和 LeRobot 导出代码。 |
 
 ## 🏋️ 模型训练与可选管线复现
@@ -376,7 +378,7 @@ python -m mint doctor --profile full
 
 公开版本以 Viewer 作为 MINT 模型推理、可视化和结果导出的统一入口。本项目仅提供第三方许可证允许公开发布的代码；受许可证限制的第三方适配与内部集成不包含在本仓库中，**因此本仓库不包含完整的生产数据流程。**
 
-GeoCalib、MoGe 和 Mega-SAM 的源码快照位于 `third_party/`，但生产管线使用的部分第三方适配代码受上游许可证限制，无法公开。其中，当前机器上修改过的 HaWoR 源码因 CC BY-NC-ND 禁止分发修改版而保持 Git 忽略。所有权重、MANO 文件和其他需单独授权的资产也不随仓库发布。
+GeoCalib、MoGe 和 Mega-SAM 的源码快照位于 `third_party/`，但生产管线使用的部分第三方适配代码受上游许可证限制，无法公开。其中，修改过的 HaWoR 源码因 CC BY-NC-ND 禁止分发修改版而不随仓库发布。所有权重、MANO 文件和其他需单独授权的资产也不随仓库发布。
 
 如果确实需要复现数据生成管线，请先阅读 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)，按各自许可条款自行获取和安装所有上游库与资产，再在本地补充必要的兼容适配。`ego_pipeline/` 已开源的代码可作为调度、接口、数据流、轨迹清理、Manifest 和 LeRobot 导出协议的实现参考。可使用 AI 编程工具帮助理解上游 API 差异并完成兼容层，但整合结果及其许可合规性由使用者负责。只有在完成这些本地整合后，才应将 `python -m mint doctor --profile data` 和 `python -m mint pipeline` 视为可用入口。
 
@@ -399,7 +401,9 @@ GeoCalib、MoGe 和 Mega-SAM 的源码快照位于 `third_party/`，但生产管
 
 ### 训练模型
 
-训练配置只保留两阶段各一份。Stage 1 在管线监督上预训练；Stage 2 从 Stage 1 的权重初始化，只训练 WorldEngine 相机头，它的产物就是本次开源发布的 checkpoint：
+训练配置只保留两阶段各一份。Stage 1 在管线监督上预训练；Stage 2 从 Stage 1 的权重初始化，在高精度相机轨迹数据上只训练相机头，它的产物就是本次开源发布的 checkpoint。
+
+请从仓库根目录运行。开始 Stage 1 前，需要将骨干权重放在 `assets/models/lingbot-map.pt`，将三份 LeRobot 数据集放在 `data/lerobot/{ego4d,egodex,epickitchen}/lerobot_v3`，或将 `model.pretrained` 和 `data.root` 改为自己的路径。两份配置默认使用离线 W&B 记录，路径与日志设置见[训练文档](docs/training.md)。
 
 ```bash
 python -m mint train --config configs/training/mint_step1.yaml
@@ -407,7 +411,7 @@ python -m mint train --config configs/training/mint_step1.yaml
 python -m mint train --config configs/training/mint_step2.yaml
 ```
 
-Stage 2 配置里的 `train.init_from` 需要改成你自己 Stage 1 产出的 `model.safetensors` 路径。
+Stage 2 配置里的 `data.root` 需要设为你准备好的相机轨迹 LeRobot 数据集路径，默认的 `data/lerobot/stage2/lerobot_v3` 仅为占位路径；`train.init_from` 需要改为自己 Stage 1 产出的 `model.safetensors` 路径，或将该文件放在默认位置 `checkpoints/stage1/model.safetensors`。
 
 `mint train` 消费由使用者单独准备的兼容 LeRobot 数据集并产出训练 checkpoint。训练完成后，可直接在 Viewer 面板中选择并检查新的 checkpoint。
 
@@ -431,13 +435,17 @@ Stage 2 配置里的 `train.init_from` 需要改成你自己 Stage 1 产出的 `
 
 公开数据集不包含 `.mp4` 视频。原始视频分别来自 Ego4D、EgoDex 和 EPIC-KITCHENS，受各自数据集许可证及访问条款约束，无法由本项目重新分发。需要视频的使用者应从对应数据集官方渠道申请和下载，并自行确认使用与再分发权限。
 
-## ⚠️ 已知局限
+## ⚠️ 局限与未来工作
 
-这些事情我们宁愿你在这里读到，而不是事后才发现：
+相机坐标系下的手部估计仍受伪标签质量限制，手部预测头尚未在高精度数据上进行微调。
 
-- **相机系下的手部精度，受训练标签的质量限制。** 本次发布的 checkpoint，手部分支的监督全部来自 EgoPipeline 自动产出的粗糙标签。Stage 2 只校正相机轨迹，手部、存在性、视场角这三个模块在那一步是冻结的，所以从头到尾没有用高精度手部数据微调过。这意味着它的手部精度大致停在它所学的那批标签的水平上：在 HOT3D 上它是表里最好的（不算 ViDiHand —— 那一行在两个 benchmark 上都训练过，只作参考），但在 ARCTIC 那种双手近距离操作物体的场景里，明显不如只做手部重建的专用方法（见 [Table 1](#相机系下的双手重建)）。要提升这一项，用高精度手部数据微调手部分支就够了，不需要改模型结构；这一步不在本次发布里。
-- **已发布的相机轨迹存在尺度放大。** 轨迹的形状可用，但长度会偏大，所以请用于预训练，不要用于米制评测或当作真实尺度的真值。成因见[公开 Ego 预训练数据](#️-公开-ego-预训练数据)。
-- **本仓库不是完整的生产数据管线。** 我们改动过的上游代码和权重（例如改过的 HaWoR），因为上游许可证不允许再分发，所以有意没有放进来。想自己跑通整条管线，需要按各上游项目的条款自行下载，见[模型训练与可选管线复现](#️-模型训练与可选管线复现)。
+尽管用于校正相机轨迹的第二阶段监督比传统管线生成的数据更准确，相对于真值仍存在残余误差。
+
+32 帧的训练窗口可能导致模型在处理长序列时产生累积漂移。
+
+未来工作将优先引入更准确、更多样且具有真实尺度的监督，以改善模型泛化能力与数据生成质量，使预测更接近真值，并缓解长视频中的轨迹漂移。
+
+已发布数据与管线源码的使用限制，见[公开 Ego 预训练数据](#️-公开-ego-预训练数据)与[模型训练与可选管线复现](#️-模型训练与可选管线复现)。
 
 ## 🧾 仓库结构
 
@@ -447,6 +455,7 @@ mint/
 |-- data/samples/     已审核的 Hot3D LeRobot v3 小样例
 |-- eval/model_effect 原版可视化、推理适配器与 benchmark
 |-- docs/             架构与运行文档（英文）
+|   `-- asset/        README 与文档使用的图片、动图和视频
 |-- environments/     完整环境与最小推理环境定义
 |-- mint/             CLI、推理引擎、渲染器和 Viewer
 |-- model_train/      训练引擎、模型、损失函数和数据加载器
@@ -493,8 +502,8 @@ wuji-ego-mint 原创代码使用 MIT License。上游模型、数据集、MANO �
 
 ```bibtex
 @misc{zhu2026mint,
-  title  = {MINT: Minting a Unified Model for World-Space Camera and Hand Motion
-            from Scalable Egocentric Pipeline Supervision},
+  title  = {MINT: A Unified Model for World-Space Camera and Hand Motion
+            Estimation from Scalable Egocentric Pipeline Supervision},
   author = {Zhu, Zijie and Cai, Weiren and Wang, Yizhou and Yang, Zhenjie and
             Liu, Yide and Chen, Jiahao and He, Guanqi},
   year   = {2026},

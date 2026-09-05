@@ -38,7 +38,8 @@ conda activate mint
 python -m mint doctor --profile full --strict
 ```
 
-The full profile adds the Ray data-pipeline and training dependencies. Both
+The full profile adds the Ray data-pipeline and training dependencies. The
+doctor does not check separately supplied HaWoR source or pipeline assets. Both
 profiles use pinned requirement layers and never clone another local
 environment. If the selected environment already exists, the script reuses it
 and continues package installation.
