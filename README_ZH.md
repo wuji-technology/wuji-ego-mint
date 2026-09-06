@@ -24,9 +24,9 @@ Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Y
 
 <sub><sup>1</sup>上海科技大学 &nbsp;&nbsp;<sup>2</sup>清华大学 &nbsp;&nbsp;<sup>3</sup>舞肌科技 &nbsp;&nbsp;<sup>4</sup>香港大学 &nbsp;&nbsp;<sup>5</sup>浙江大学 &nbsp;&nbsp;<sup>\*</sup>通讯作者</sub>
 
-<!-- TODO：arXiv 链接上线后填进下面这个 badge。 -->
+<!-- TODO：arXiv 公开后，将论文 PDF 链接替换为 arXiv 链接。 -->
 [![项目主页](https://img.shields.io/badge/Project-Page-2f855a)](https://1847540790.github.io/mint-project-page/)
-[![arXiv](https://img.shields.io/badge/arXiv-coming_soon-b31b1b)]()
+[![论文 PDF](https://img.shields.io/badge/Paper-PDF-b31b1b)](docs/asset/wuji_ego_mint.pdf)
 [![模型](https://img.shields.io/badge/%F0%9F%A4%97_Model-mint__v1-ff9d00)](https://huggingface.co/ZZJAsher/mint_v1)
 [![模型](https://img.shields.io/badge/ModelScope_Model-mint__v1-624aff)](https://www.modelscope.cn/models/AsherZhu/mint_v1)
 [![数据](https://img.shields.io/badge/%F0%9F%A4%97_Dataset-1,021_hours-ff9d00)](https://huggingface.co/datasets/ZZJAsher/wuji_ego_mint)
@@ -228,7 +228,7 @@ EgoPipeline 自己也做过分布式优化（Ray 多卡算子、常驻 worker、
 
 ### 相机系下的双手重建
 
-**结果来源：表中除 MINT 与 MINT + UKF 外，所有方法的评测结果均引自 ViDiHand 评测。** MINT 与 MINT + UKF 的结果采用本项目[论文](https://1847540790.github.io/mint-project-page/assets/paper/mint-paper.pdf) Table 1 中的报告值。
+**结果来源：表中除 MINT 与 MINT + UKF 外，所有方法的评测结果均引自 ViDiHand 评测。** MINT 与 MINT + UKF 的结果采用本项目[论文](docs/asset/wuji_ego_mint.pdf) Table 1 中的报告值。
 
 评测采用论文 Sec. V-A 所述的 coverage-aware 协议：漏检的手不会被排除，而是按标准 MANO 占位手模型的误差计入位姿指标。FAcc、Recall 和 F1 衡量检测表现，MPJPE-p 与 PA-MPJPE-p 衡量关节姿态，GO-p 与 CT-p 衡量手腕朝向和手部位置，Jitter 衡量时序平滑性。
 
@@ -288,7 +288,7 @@ MINT 在 HOT3D 和 ARCTIC 上采用零样本评测设置，其两个训练阶段
 
 ### 世界系下的相机轨迹
 
-下表误差指标摘录自[论文](https://1847540790.github.io/mint-project-page/assets/paper/mint-paper.pdf) **Table 2**：HOT3D（27 条序列、94,978 帧）与 ARCTIC P2 验证集（34 条序列、25,883 帧）。序列按**完整长度评测，只做 SE(3) 对齐、不拟合尺度** —— 因此尺度误差会被计入而不是被吸收掉。弧长比定义为**真值轨迹长度 / 预测轨迹长度（GT / Pred）**，逐序列计算后等权平均：大于 1 表示预测路程偏短，小于 1 表示预测路程偏长。`MegaSaM†` 不带深度精化。`MINT w/o stage 2` 从未见过米制真值。加粗标记沿用论文；弧长比的目标为 1。
+下表误差指标摘录自[论文](docs/asset/wuji_ego_mint.pdf) **Table 2**：HOT3D（27 条序列、94,978 帧）与 ARCTIC P2 验证集（34 条序列、25,883 帧）。序列按**完整长度评测，只做 SE(3) 对齐、不拟合尺度** —— 因此尺度误差会被计入而不是被吸收掉。弧长比定义为**真值轨迹长度 / 预测轨迹长度（GT / Pred）**，逐序列计算后等权平均：大于 1 表示预测路程偏短，小于 1 表示预测路程偏长。`MegaSaM†` 不带深度精化。`MINT w/o stage 2` 从未见过米制真值。加粗标记沿用论文；弧长比的目标为 1。
 
 <table>
 <thead>

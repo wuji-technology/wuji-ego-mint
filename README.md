@@ -27,9 +27,9 @@ Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Y
 
 <sub><sup>1</sup>ShanghaiTech University &nbsp;&nbsp;<sup>2</sup>Tsinghua University &nbsp;&nbsp;<sup>3</sup>Wuji Technology &nbsp;&nbsp;<sup>4</sup>The University of Hong Kong &nbsp;&nbsp;<sup>5</sup>Zhejiang University &nbsp;&nbsp;<sup>\*</sup>Corresponding authors</sub>
 
-<!-- TODO: paste the arXiv link into the badge below once it is live. -->
+<!-- TODO: replace the paper PDF link with the arXiv link once it is public. -->
 [![Project Page](https://img.shields.io/badge/Project-Page-2f855a)](https://1847540790.github.io/mint-project-page/)
-[![arXiv](https://img.shields.io/badge/arXiv-coming_soon-b31b1b)]()
+[![Paper PDF](https://img.shields.io/badge/Paper-PDF-b31b1b)](docs/asset/wuji_ego_mint.pdf)
 [![Model](https://img.shields.io/badge/%F0%9F%A4%97_Model-mint__v1-ff9d00)](https://huggingface.co/ZZJAsher/mint_v1)
 [![Model](https://img.shields.io/badge/ModelScope_Model-mint__v1-624aff)](https://www.modelscope.cn/models/AsherZhu/mint_v1)
 [![Dataset](https://img.shields.io/badge/%F0%9F%A4%97_Dataset-1,021_hours-ff9d00)](https://huggingface.co/datasets/ZZJAsher/wuji_ego_mint)
@@ -231,7 +231,7 @@ EgoPipeline is itself distributed-optimised (Ray multi-GPU operators, persistent
 
 ### Camera-frame bimanual reconstruction
 
-**Result sources: all results except MINT and MINT + UKF are taken from the ViDiHand evaluation.** Results for MINT and MINT + UKF are those reported in Table 1 of the MINT [paper](https://1847540790.github.io/mint-project-page/assets/paper/mint-paper.pdf).
+**Result sources: all results except MINT and MINT + UKF are taken from the ViDiHand evaluation.** Results for MINT and MINT + UKF are those reported in Table 1 of the MINT [paper](docs/asset/wuji_ego_mint.pdf).
 
 Following the coverage-aware protocol in Sec. V-A of the paper, missed hands receive the error of a canonical MANO placeholder instead of being excluded from pose evaluation. FAcc, recall, and F1 measure detection; MPJPE-p and PA-MPJPE-p measure articulated pose; GO-p and CT-p measure wrist orientation and hand placement; Jitter measures temporal smoothness.
 
@@ -291,7 +291,7 @@ On **HOT3D**, the paper reports 23.61 mm MPJPE-p and 10.70 mm PA-MPJPE-p for MIN
 
 ### World-frame camera trajectory
 
-The error metrics are transcribed from **Table 2 of the [paper](https://1847540790.github.io/mint-project-page/assets/paper/mint-paper.pdf)**: HOT3D (27 sequences, 94,978 frames) and the ARCTIC P2 validation split (34 sequences, 25,883 frames). Sequences are evaluated at **full length, with SE(3)-only alignment and no fitted scale** — so scale error is charged rather than absorbed. The arc-length ratio is **GT path length / predicted path length**, averaged equally across sequences: above 1 means the predicted path is too short; below 1 means it is too long. `MegaSaM†` runs without depth refinement. `MINT w/o stage 2` never sees metric ground truth. Bold marks follow the paper; for the arc-length ratio, the target is 1.
+The error metrics are transcribed from **Table 2 of the [paper](docs/asset/wuji_ego_mint.pdf)**: HOT3D (27 sequences, 94,978 frames) and the ARCTIC P2 validation split (34 sequences, 25,883 frames). Sequences are evaluated at **full length, with SE(3)-only alignment and no fitted scale** — so scale error is charged rather than absorbed. The arc-length ratio is **GT path length / predicted path length**, averaged equally across sequences: above 1 means the predicted path is too short; below 1 means it is too long. `MegaSaM†` runs without depth refinement. `MINT w/o stage 2` never sees metric ground truth. Bold marks follow the paper; for the arc-length ratio, the target is 1.
 
 <table>
 <thead>
