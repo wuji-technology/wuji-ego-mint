@@ -343,7 +343,7 @@ MINT 在 HOT3D 和 ARCTIC 上采用零样本评测设置，其两个训练阶段
 - **相机评测。** 每条完整序列只做 SE(3) 对齐，不拟合尺度；ATE 与 RPE 逐序列计算，均值和中位数汇总成功完成评测的序列。
 - **复现条件。** 本地结果与参考值比较前，需要核对 checkpoint、数据划分与评测清单、预处理、对齐及聚合设置是否符合对应实验。MINT 的指标定义与报告代码见 [`eval/model_effect/benchmark/`](eval/model_effect/benchmark/)。
 
-**Benchmark 结果诚信声明。** 我们承诺，本项目报告的每一项测试指标均为按照所述评测协议实际运行所得的真实结果，不会对原始数值进行人为修改。如需精确复现其他方法或 baseline 的具体数值，请直接使用对应方法的官方仓库与原始环境。MINT 使用的指标定义、对齐规则、聚合逻辑和报告代码均公开在 `eval/model_effect/benchmark/` 中，可直接检查具体计算方式。
+**诚信声明。** 我们的 EgoPipeline 管线与 MINT 训练代码支持复现。我们承诺，本项目报告的每一项测试指标均为按照所述评测协议实际运行所得的真实结果，不会对原始数值进行人为修改。如需精确复现其他方法或 baseline 的具体数值，请直接使用对应方法的官方仓库与原始环境。MINT 使用的指标定义、对齐规则、聚合逻辑和报告代码均公开在 `eval/model_effect/benchmark/` 中，可直接检查具体计算方式。
 
 `eval/model_effect/benchmark/` 与对应测试完整开源，并已接入 Viewer 顶栏的 Benchmark 面板。使用前需自行下载 HOT3D 和 ARCTIC，按各 adapter 要求组织数据并安装可选依赖；也可独立运行 CLI：
 
