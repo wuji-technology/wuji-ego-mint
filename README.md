@@ -291,13 +291,12 @@ On **HOT3D**, the paper reports 23.61 mm MPJPE-p and 10.70 mm PA-MPJPE-p for MIN
 
 ### World-frame camera trajectory
 
-The error metrics are transcribed from **Table 2 of the [paper](https://1847540790.github.io/mint-project-page/assets/paper/mint-paper.pdf)**, with MegaSaM HOT3D coverage corrected to 27/27: HOT3D (27 sequences, 94,978 frames) and the ARCTIC P2 validation split (34 sequences, 25,883 frames). Sequences are evaluated at **full length, with SE(3)-only alignment and no fitted scale** — so scale error is charged rather than absorbed. The arc-length ratio is **GT path length / predicted path length**, averaged equally across sequences: above 1 means the predicted path is too short; below 1 means it is too long. Coverage is how many sequences a method completed: `MegaSaM†` runs without depth refinement. `MINT w/o stage 2` never sees metric ground truth. Bold marks follow the paper; for the arc-length ratio, the target is 1.
+The error metrics are transcribed from **Table 2 of the [paper](https://1847540790.github.io/mint-project-page/assets/paper/mint-paper.pdf)**: HOT3D (27 sequences, 94,978 frames) and the ARCTIC P2 validation split (34 sequences, 25,883 frames). Sequences are evaluated at **full length, with SE(3)-only alignment and no fitted scale** — so scale error is charged rather than absorbed. The arc-length ratio is **GT path length / predicted path length**, averaged equally across sequences: above 1 means the predicted path is too short; below 1 means it is too long. `MegaSaM†` runs without depth refinement. `MINT w/o stage 2` never sees metric ground truth. Bold marks follow the paper; for the arc-length ratio, the target is 1.
 
 <table>
 <thead>
 <tr>
   <th rowspan="2" align="left">Method</th>
-  <th rowspan="2" align="right">Cov.<br><sub>seq.</sub></th>
   <th colspan="2" align="center">ATE ↓ (mm)</th>
   <th colspan="2" align="center">RPE-T ↓ (mm)</th>
   <th colspan="2" align="center">RPE-R ↓ (deg)</th>
@@ -314,22 +313,22 @@ The error metrics are transcribed from **Table 2 of the [paper](https://18475407
 </tr>
 </thead>
 <tbody>
-<tr><th colspan="10" align="left">HOT3D</th></tr>
-<tr><td align="left">DROID-SLAM</td><td align="right">27/27</td><td align="right"><b>49.1</b></td><td align="right"><b>39.6</b></td><td align="right">5.36</td><td align="right">3.52</td><td align="right">0.227</td><td align="right">0.146</td><td align="right">0.778</td><td align="right"><b>0.36</b></td></tr>
-<tr><td align="left">HaWoR</td><td align="right">27/27</td><td align="right">200.3</td><td align="right">179.2</td><td align="right">8.60</td><td align="right">7.33</td><td align="right">1.098</td><td align="right">0.928</td><td align="right"><b>0.950</b></td><td align="right">1.28</td></tr>
-<tr><td align="left">InfiniteVGGT</td><td align="right">27/27</td><td align="right">124.8</td><td align="right">100.0</td><td align="right">13.52</td><td align="right">9.67</td><td align="right">1.492</td><td align="right">0.392</td><td align="right">0.556</td><td align="right">0.80</td></tr>
-<tr><td align="left">LingBot-Map</td><td align="right">27/27</td><td align="right">85.5</td><td align="right">51.0</td><td align="right">7.56</td><td align="right">6.18</td><td align="right">0.684</td><td align="right">0.253</td><td align="right">0.712</td><td align="right">0.55</td></tr>
-<tr><td align="left">MegaSaM†</td><td align="right">27/27</td><td align="right">94.4</td><td align="right">65.3</td><td align="right"><b>3.18</b></td><td align="right"><b>2.13</b></td><td align="right"><b>0.082</b></td><td align="right"><b>0.063</b></td><td align="right">0.716</td><td align="right">0.69</td></tr>
-<tr><td align="left">MINT w/o stage 2</td><td align="right">27/27</td><td align="right">524.7</td><td align="right">434.6</td><td align="right">8.75</td><td align="right">8.37</td><td align="right">0.234</td><td align="right">0.229</td><td align="right">0.466</td><td align="right">3.29</td></tr>
-<tr><td align="left">MINT</td><td align="right">27/27</td><td align="right">181.7</td><td align="right">155.5</td><td align="right">4.69</td><td align="right">4.78</td><td align="right">0.284</td><td align="right">0.259</td><td align="right">1.094</td><td align="right">1.15</td></tr>
-<tr><th colspan="10" align="left">ARCTIC</th></tr>
-<tr><td align="left">DROID-SLAM</td><td align="right">34/34</td><td align="right">181.5</td><td align="right">49.6</td><td align="right">33.84</td><td align="right">14.25</td><td align="right">1.006</td><td align="right">0.423</td><td align="right"><b>0.964</b></td><td align="right">8.07</td></tr>
-<tr><td align="left">HaWoR</td><td align="right">34/34</td><td align="right">66.2</td><td align="right"><b>29.4</b></td><td align="right">24.08</td><td align="right">4.16</td><td align="right">0.298</td><td align="right"><b>0.151</b></td><td align="right">0.759</td><td align="right">2.87</td></tr>
-<tr><td align="left">InfiniteVGGT</td><td align="right">34/34</td><td align="right">79.0</td><td align="right">69.1</td><td align="right">16.21</td><td align="right">12.63</td><td align="right">1.265</td><td align="right">0.655</td><td align="right">0.284</td><td align="right">3.23</td></tr>
-<tr><td align="left">LingBot-Map</td><td align="right">34/34</td><td align="right">59.6</td><td align="right">62.0</td><td align="right">9.17</td><td align="right">8.47</td><td align="right">0.980</td><td align="right">0.717</td><td align="right">0.591</td><td align="right">2.46</td></tr>
-<tr><td align="left">MegaSaM†</td><td align="right">34/34</td><td align="right"><b>51.4</b></td><td align="right">50.4</td><td align="right">8.73</td><td align="right">5.58</td><td align="right">0.779</td><td align="right">0.725</td><td align="right">1.956</td><td align="right"><b>2.15</b></td></tr>
-<tr><td align="left">MINT w/o stage 2</td><td align="right">34/34</td><td align="right">63.7</td><td align="right">59.3</td><td align="right">3.53</td><td align="right">3.62</td><td align="right"><b>0.251</b></td><td align="right">0.243</td><td align="right">0.755</td><td align="right">2.63</td></tr>
-<tr><td align="left">MINT</td><td align="right">34/34</td><td align="right">81.9</td><td align="right">83.2</td><td align="right"><b>3.39</b></td><td align="right"><b>3.37</b></td><td align="right">0.256</td><td align="right">0.251</td><td align="right">1.412</td><td align="right">3.40</td></tr>
+<tr><th colspan="9" align="left">HOT3D</th></tr>
+<tr><td align="left">DROID-SLAM</td><td align="right"><b>49.1</b></td><td align="right"><b>39.6</b></td><td align="right">5.36</td><td align="right">3.52</td><td align="right">0.227</td><td align="right">0.146</td><td align="right">0.778</td><td align="right"><b>0.36</b></td></tr>
+<tr><td align="left">HaWoR</td><td align="right">200.3</td><td align="right">179.2</td><td align="right">8.60</td><td align="right">7.33</td><td align="right">1.098</td><td align="right">0.928</td><td align="right"><b>0.950</b></td><td align="right">1.28</td></tr>
+<tr><td align="left">InfiniteVGGT</td><td align="right">124.8</td><td align="right">100.0</td><td align="right">13.52</td><td align="right">9.67</td><td align="right">1.492</td><td align="right">0.392</td><td align="right">0.556</td><td align="right">0.80</td></tr>
+<tr><td align="left">LingBot-Map</td><td align="right">85.5</td><td align="right">51.0</td><td align="right">7.56</td><td align="right">6.18</td><td align="right">0.684</td><td align="right">0.253</td><td align="right">0.712</td><td align="right">0.55</td></tr>
+<tr><td align="left">MegaSaM†</td><td align="right">94.4</td><td align="right">65.3</td><td align="right"><b>3.18</b></td><td align="right"><b>2.13</b></td><td align="right"><b>0.082</b></td><td align="right"><b>0.063</b></td><td align="right">0.716</td><td align="right">0.69</td></tr>
+<tr><td align="left">MINT w/o stage 2</td><td align="right">524.7</td><td align="right">434.6</td><td align="right">8.75</td><td align="right">8.37</td><td align="right">0.234</td><td align="right">0.229</td><td align="right">0.466</td><td align="right">3.29</td></tr>
+<tr><td align="left">MINT</td><td align="right">181.7</td><td align="right">155.5</td><td align="right">4.69</td><td align="right">4.78</td><td align="right">0.284</td><td align="right">0.259</td><td align="right">1.094</td><td align="right">1.15</td></tr>
+<tr><th colspan="9" align="left">ARCTIC</th></tr>
+<tr><td align="left">DROID-SLAM</td><td align="right">181.5</td><td align="right">49.6</td><td align="right">33.84</td><td align="right">14.25</td><td align="right">1.006</td><td align="right">0.423</td><td align="right"><b>0.964</b></td><td align="right">8.07</td></tr>
+<tr><td align="left">HaWoR</td><td align="right">66.2</td><td align="right"><b>29.4</b></td><td align="right">24.08</td><td align="right">4.16</td><td align="right">0.298</td><td align="right"><b>0.151</b></td><td align="right">0.759</td><td align="right">2.87</td></tr>
+<tr><td align="left">InfiniteVGGT</td><td align="right">79.0</td><td align="right">69.1</td><td align="right">16.21</td><td align="right">12.63</td><td align="right">1.265</td><td align="right">0.655</td><td align="right">0.284</td><td align="right">3.23</td></tr>
+<tr><td align="left">LingBot-Map</td><td align="right">59.6</td><td align="right">62.0</td><td align="right">9.17</td><td align="right">8.47</td><td align="right">0.980</td><td align="right">0.717</td><td align="right">0.591</td><td align="right">2.46</td></tr>
+<tr><td align="left">MegaSaM†</td><td align="right"><b>51.4</b></td><td align="right">50.4</td><td align="right">8.73</td><td align="right">5.58</td><td align="right">0.779</td><td align="right">0.725</td><td align="right">1.956</td><td align="right"><b>2.15</b></td></tr>
+<tr><td align="left">MINT w/o stage 2</td><td align="right">63.7</td><td align="right">59.3</td><td align="right">3.53</td><td align="right">3.62</td><td align="right"><b>0.251</b></td><td align="right">0.243</td><td align="right">0.755</td><td align="right">2.63</td></tr>
+<tr><td align="left">MINT</td><td align="right">81.9</td><td align="right">83.2</td><td align="right"><b>3.39</b></td><td align="right"><b>3.37</b></td><td align="right">0.256</td><td align="right">0.251</td><td align="right">1.412</td><td align="right">3.40</td></tr>
 </tbody>
 </table>
 
@@ -341,12 +340,13 @@ The paper reports mean RPE-T of **3.39 mm on ARCTIC** and **4.69 mm on HOT3D** f
 
 ### Evaluation protocol and result sources
 
-The hand-reconstruction and camera-trajectory tables follow Tables 1 and 2 of the paper, with the MegaSaM HOT3D coverage correction noted in the camera section. Non-MINT hand results retain their source in the ViDiHand evaluation; camera-trajectory results follow the full-sequence protocol stated in Table 2. Shared metric definitions alone do not establish that different evaluation splits or manifests are directly comparable.
+The hand-reconstruction and camera-trajectory tables follow Tables 1 and 2 of the paper. Non-MINT hand results retain their source in the ViDiHand evaluation; camera-trajectory results follow the full-sequence protocol stated in Table 2. Shared metric definitions alone do not establish that different evaluation splits or manifests are directly comparable.
 
 - **Hand evaluation.** The coverage-aware protocol includes missed ground-truth hands through a canonical MANO placeholder penalty. Pose metrics therefore include true positives and false negatives.
 - **Camera evaluation.** Each complete sequence is aligned with SE(3), without fitting scale. ATE and RPE are computed per sequence; the reported mean and median aggregate the successfully evaluated sequences.
-- **Camera coverage.** Coverage is the number of successfully evaluated sequences divided by the total number in the evaluation set. Failed sequences remain in this coverage denominator; trajectory-error means and medians use only successfully evaluated sequences with valid metric values.
 - **Reproduction.** Compare local results with a reference only when the checkpoint, evaluation split and manifest, preprocessing, alignment, and aggregation settings match the intended experiment. MINT's metric definitions and reporting code are available in [`eval/model_effect/benchmark/`](eval/model_effect/benchmark/).
+
+**Benchmark integrity statement.** We commit that every metric reported by this project is an authentic result produced under the stated evaluation protocol; we do not alter the original numeric results. To reproduce a baseline or another method's exact values, use that method's official repository and environment. The metric definitions, alignment rules, aggregation logic, and reporting code used by MINT are available in `eval/model_effect/benchmark/` for inspection.
 
 The complete implementation and tests live in `eval/model_effect/benchmark/` and are integrated into the Viewer's Benchmark panel. Before use, download HOT3D and ARCTIC, organize the benchmark data as required by each adapter, and install the optional runtime. The CLI remains available:
 
