@@ -44,6 +44,7 @@ def transcode(source: Path, output: Path, masks: list, max_seconds: float, max_h
     # Phone footage carries a display-matrix rotation that OpenCV ignores
     # unless asked; without this the frames are decoded sideways.
     if capture.isOpened() and not capture.set(cv2.CAP_PROP_ORIENTATION_AUTO, 1):
+        capture.release()
         raise RuntimeError(
             "OpenCV did not apply the display-matrix rotation; "
             "phone footage would be decoded sideways."

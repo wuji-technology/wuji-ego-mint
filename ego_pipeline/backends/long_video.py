@@ -25,6 +25,7 @@ def get_video_info(video_path: str) -> tuple[float, float, int]:
     # Phone footage carries a display-matrix rotation that OpenCV ignores
     # unless asked; without this the frames are decoded sideways.
     if cap.isOpened() and not cap.set(cv2.CAP_PROP_ORIENTATION_AUTO, 1):
+        cap.release()
         raise RuntimeError(
             "OpenCV did not apply the display-matrix rotation; "
             "phone footage would be decoded sideways."
@@ -43,6 +44,7 @@ def _write_clip_video(video_path: str, out_path: str,
     # Phone footage carries a display-matrix rotation that OpenCV ignores
     # unless asked; without this the frames are decoded sideways.
     if cap.isOpened() and not cap.set(cv2.CAP_PROP_ORIENTATION_AUTO, 1):
+        cap.release()
         raise RuntimeError(
             "OpenCV did not apply the display-matrix rotation; "
             "phone footage would be decoded sideways."

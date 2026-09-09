@@ -10,6 +10,7 @@ def is_camera_moving(video_path: str, threshold: float = 2.0, sample_interval: i
     # Phone footage carries a display-matrix rotation that OpenCV ignores
     # unless asked; without this the frames are decoded sideways.
     if cap.isOpened() and not cap.set(cv2.CAP_PROP_ORIENTATION_AUTO, 1):
+        cap.release()
         raise RuntimeError(
             "OpenCV did not apply the display-matrix rotation; "
             "phone footage would be decoded sideways."
