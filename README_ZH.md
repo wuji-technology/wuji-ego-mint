@@ -24,9 +24,8 @@ Zijie Zhu<sup>1,3,4</sup> &nbsp;·&nbsp; Weiren Cai<sup>3</sup> &nbsp;·&nbsp; Y
 
 <sub><sup>1</sup>上海科技大学 &nbsp;&nbsp;<sup>2</sup>清华大学 &nbsp;&nbsp;<sup>3</sup>舞肌科技 &nbsp;&nbsp;<sup>4</sup>香港大学 &nbsp;&nbsp;<sup>5</sup>浙江大学 &nbsp;&nbsp;<sup>\*</sup>通讯作者</sub>
 
-<!-- TODO：arXiv 公开后，将论文 PDF 链接替换为 arXiv 链接。 -->
 [![项目主页](https://img.shields.io/badge/Project-Page-2f855a)](https://1847540790.github.io/mint-project-page/)
-[![论文 PDF](https://img.shields.io/badge/Paper-PDF-b31b1b)](docs/asset/wuji_ego_mint.pdf)
+[![arXiv](https://img.shields.io/badge/arXiv-2609.04958-b31b1b)](https://arxiv.org/pdf/2609.04958)
 [![模型](https://img.shields.io/badge/%F0%9F%A4%97_Model-mint__v1-ff9d00)](https://huggingface.co/ZZJAsher/mint_v1)
 [![模型](https://img.shields.io/badge/ModelScope_Model-mint__v1-624aff)](https://www.modelscope.cn/models/AsherZhu/mint_v1)
 [![数据](https://img.shields.io/badge/%F0%9F%A4%97_Dataset-1,021_hours-ff9d00)](https://huggingface.co/datasets/ZZJAsher/wuji_ego_mint)
@@ -228,11 +227,11 @@ EgoPipeline 自己也做过分布式优化（Ray 多卡算子、常驻 worker、
 
 ### 相机系下的双手重建
 
-**结果来源：表中除 MINT 与 MINT + UKF 外，所有方法的评测结果均引自 ViDiHand 评测。** MINT 与 MINT + UKF 的结果采用本项目[论文](docs/asset/wuji_ego_mint.pdf) Table 1 中的报告值。
+**结果来源：MINT 与 MINT + UKF 采用最新 coverage-aware 评测，其余方法的结果均引自 ViDiHand 评测。**
 
 评测采用论文 Sec. V-A 所述的 coverage-aware 协议：漏检的手不会被排除，而是按标准 MANO 占位手模型的误差计入位姿指标。FAcc、Recall 和 F1 衡量检测表现，MPJPE-p 与 PA-MPJPE-p 衡量关节姿态，GO-p 与 CT-p 衡量手腕朝向和手部位置，Jitter 衡量时序平滑性。
 
-MINT 在 HOT3D 和 ARCTIC 上采用零样本评测设置，其两个训练阶段均未使用上述数据集。由于 ViDiHand（标记为 `*`）的训练数据包含上述两个基准数据集中的大部分数据，其结果仅作为域内参考，不纳入零样本方法的直接比较。`MINT + UKF` 使用与 MINT 相同的模型权重，并在推理阶段应用无迹卡尔曼滤波（UKF），其余评测设置保持一致。
+MINT 在 HOT3D 和 ARCTIC 上采用零样本评测设置，其两个训练阶段均未使用上述数据集。`MINT + UKF` 使用与 MINT 相同的模型权重，并在推理阶段应用无迹卡尔曼滤波（UKF），其余评测设置保持一致。加粗表示每列展示结果中的最优值；并列最优均加粗。
 
 <table>
 <thead>
@@ -249,6 +248,7 @@ MINT 在 HOT3D 和 ARCTIC 上采用零样本评测设置，其两个训练阶段
   <th align="right">F1 ↑</th>
   <th align="right">MPJPE-p ↓<br><sub>mm</sub></th>
   <th align="right">PA-MPJPE-p ↓<br><sub>mm</sub></th>
+
   <th align="right">GO-p ↓<br><sub>度</sub></th>
   <th align="right">CT-p ↓<br><sub>m</sub></th>
   <th align="right">Jitter ↓<br><sub>mm/frame²</sub></th>
@@ -259,36 +259,34 @@ MINT 在 HOT3D 和 ARCTIC 上采用零样本评测设置，其两个训练阶段
 <tr><td align="left">InterWild</td><td align="right">0.878</td><td align="right">0.943</td><td align="right">0.959</td><td align="right">30.82</td><td align="right">15.95</td><td align="right">25.39</td><td align="right">0.097</td><td align="right">46.58</td></tr>
 <tr><td align="left">HaMeR</td><td align="right">0.875</td><td align="right">0.943</td><td align="right">0.957</td><td align="right">29.20</td><td align="right">14.60</td><td align="right">24.91</td><td align="right">0.095</td><td align="right">18.28</td></tr>
 <tr><td align="left">Hamba</td><td align="right">0.833</td><td align="right">0.912</td><td align="right">0.941</td><td align="right">31.23</td><td align="right">17.17</td><td align="right">27.82</td><td align="right">0.110</td><td align="right">15.36</td></tr>
-<tr><td align="left">WildHands</td><td align="right">0.879</td><td align="right">0.946</td><td align="right">0.960</td><td align="right">25.70</td><td align="right">13.94</td><td align="right">22.32</td><td align="right">0.058</td><td align="right">12.97</td></tr>
+<tr><td align="left">WildHands</td><td align="right">0.879</td><td align="right">0.946</td><td align="right">0.960</td><td align="right">25.70</td><td align="right">13.94</td><td align="right">22.32</td><td align="right"><b>0.058</b></td><td align="right">12.97</td></tr>
 <tr><td align="left">OmniHands</td><td align="right">0.866</td><td align="right">0.949</td><td align="right">0.954</td><td align="right">29.67</td><td align="right">14.20</td><td align="right">24.58</td><td align="right">0.087</td><td align="right">45.31</td></tr>
-<tr><td align="left">WiLoR</td><td align="right">0.919</td><td align="right">0.951</td><td align="right">0.974</td><td align="right">22.01</td><td align="right">11.87</td><td align="right">17.36</td><td align="right">0.075</td><td align="right">24.09</td></tr>
+<tr><td align="left">WiLoR</td><td align="right"><b>0.919</b></td><td align="right">0.951</td><td align="right">0.974</td><td align="right"><b>22.01</b></td><td align="right"><b>11.87</b></td><td align="right"><b>17.36</b></td><td align="right">0.075</td><td align="right">24.09</td></tr>
 <tr><td align="left">Dyn-HaMR</td><td align="right">0.842</td><td align="right">0.918</td><td align="right">0.951</td><td align="right">27.90</td><td align="right">17.02</td><td align="right">25.95</td><td align="right">0.121</td><td align="right">12.84</td></tr>
 <tr><td align="left">HaWoR</td><td align="right">0.700</td><td align="right">0.817</td><td align="right">0.895</td><td align="right">45.36</td><td align="right">26.38</td><td align="right">43.33</td><td align="right">0.149</td><td align="right">19.79</td></tr>
-<tr><td align="left"><i>ViDiHand*</i></td><td align="right"><i>0.997</i></td><td align="right"><i>0.999</i></td><td align="right"><i>0.999</i></td><td align="right"><i>21.67</i></td><td align="right"><i>9.82</i></td><td align="right"><i>14.64</i></td><td align="right"><i>0.047</i></td><td align="right"><i>3.18</i></td></tr>
-<tr><td align="left">MINT</td><td align="right">0.916</td><td align="right">0.957</td><td align="right">0.978</td><td align="right">51.03</td><td align="right">27.71</td><td align="right">24.19</td><td align="right">0.140</td><td align="right">12.26</td></tr>
-<tr><td align="left">MINT + UKF</td><td align="right">0.916</td><td align="right">0.957</td><td align="right">0.978</td><td align="right">51.09</td><td align="right">27.70</td><td align="right">24.22</td><td align="right">0.140</td><td align="right">2.54</td></tr>
+<tr><td align="left">MINT</td><td align="right">0.918</td><td align="right"><b>0.957</b></td><td align="right"><b>0.978</b></td><td align="right">29.55</td><td align="right">16.57</td><td align="right">20.88</td><td align="right">0.09</td><td align="right">12.77</td></tr>
+<tr><td align="left">MINT + UKF</td><td align="right">0.918</td><td align="right"><b>0.957</b></td><td align="right"><b>0.978</b></td><td align="right">29.58</td><td align="right">16.56</td><td align="right">20.89</td><td align="right">0.09</td><td align="right"><b>2.67</b></td></tr>
 <tr><th colspan="9" align="left">HOT3D</th></tr>
 <tr><td align="left">InterWild</td><td align="right">0.669</td><td align="right">0.881</td><td align="right">0.868</td><td align="right">77.17</td><td align="right">24.81</td><td align="right">58.50</td><td align="right">0.213</td><td align="right">101.16</td></tr>
 <tr><td align="left">HaMeR</td><td align="right">0.692</td><td align="right">0.904</td><td align="right">0.883</td><td align="right">68.31</td><td align="right">21.46</td><td align="right">49.64</td><td align="right">0.102</td><td align="right">23.63</td></tr>
 <tr><td align="left">Hamba</td><td align="right">0.632</td><td align="right">0.828</td><td align="right">0.853</td><td align="right">71.73</td><td align="right">29.62</td><td align="right">56.53</td><td align="right">0.128</td><td align="right">18.51</td></tr>
 <tr><td align="left">WildHands</td><td align="right">0.655</td><td align="right">0.863</td><td align="right">0.844</td><td align="right">52.79</td><td align="right">28.95</td><td align="right">53.93</td><td align="right">0.157</td><td align="right">22.89</td></tr>
 <tr><td align="left">OmniHands</td><td align="right">0.649</td><td align="right">0.895</td><td align="right">0.868</td><td align="right">63.28</td><td align="right">22.68</td><td align="right">49.12</td><td align="right">0.133</td><td align="right">69.51</td></tr>
-<tr><td align="left">WiLoR</td><td align="right">0.827</td><td align="right">0.897</td><td align="right">0.937</td><td align="right">30.97</td><td align="right">19.98</td><td align="right">25.75</td><td align="right">0.098</td><td align="right">17.98</td></tr>
+<tr><td align="left">WiLoR</td><td align="right">0.827</td><td align="right">0.897</td><td align="right">0.937</td><td align="right"><b>30.97</b></td><td align="right">19.98</td><td align="right"><b>25.75</b></td><td align="right"><b>0.098</b></td><td align="right">17.98</td></tr>
 <tr><td align="left">Dyn-HaMR</td><td align="right">0.614</td><td align="right">0.811</td><td align="right">0.802</td><td align="right">74.21</td><td align="right">38.20</td><td align="right">43.85</td><td align="right">0.571</td><td align="right">44.94</td></tr>
 <tr><td align="left">HaWoR</td><td align="right">0.348</td><td align="right">0.499</td><td align="right">0.654</td><td align="right">71.40</td><td align="right">66.03</td><td align="right">79.35</td><td align="right">0.262</td><td align="right">23.87</td></tr>
-<tr><td align="left"><i>ViDiHand*</i></td><td align="right"><i>0.948</i></td><td align="right"><i>0.974</i></td><td align="right"><i>0.983</i></td><td align="right"><i>21.51</i></td><td align="right"><i>11.38</i></td><td align="right"><i>15.83</i></td><td align="right"><i>0.040</i></td><td align="right"><i>3.74</i></td></tr>
-<tr><td align="left">MINT</td><td align="right">0.940</td><td align="right">0.977</td><td align="right">0.950</td><td align="right">23.61</td><td align="right">10.70</td><td align="right">16.78</td><td align="right">0.073</td><td align="right">11.52</td></tr>
-<tr><td align="left">MINT + UKF</td><td align="right">0.940</td><td align="right">0.977</td><td align="right">0.950</td><td align="right">23.62</td><td align="right">10.69</td><td align="right">16.77</td><td align="right">0.073</td><td align="right">2.39</td></tr>
+<tr><td align="left">MINT</td><td align="right"><b>0.946</b></td><td align="right"><b>0.983</b></td><td align="right"><b>0.953</b></td><td align="right">34.04</td><td align="right">16.96</td><td align="right">16.57</td><td align="right">0.23</td><td align="right">12.50</td></tr>
+<tr><td align="left">MINT + UKF</td><td align="right"><b>0.946</b></td><td align="right"><b>0.983</b></td><td align="right"><b>0.953</b></td><td align="right">34.03</td><td align="right"><b>16.95</b></td><td align="right">16.55</td><td align="right">0.23</td><td align="right"><b>2.55</b></td></tr>
 </tbody>
 </table>
 
-论文报告的 MINT 在 **HOT3D** 上达到 23.61 mm MPJPE-p 和 10.70 mm PA-MPJPE-p，在 **ARCTIC** 上对应为 51.03 mm 和 27.71 mm。应用 UKF 后，HOT3D 的 Jitter 从 11.52 降至 2.39 mm/frame²，ARCTIC 从 12.26 降至 2.54 mm/frame²，同时 MPJPE-p 与 PA-MPJPE-p 的变化均小于 0.1 mm。目前手部预测头尚未在高精度数据上微调，相关局限与后续方向见[局限与未来工作](#️-局限与未来工作)。
+在最新本地评测中，应用 UKF 后，**HOT3D** 的 Jitter 从 12.50 降至 2.55 mm/frame²，**ARCTIC** 从 12.77 降至 2.67 mm/frame²，同时检测指标保持不变。目前手部预测头尚未在高精度数据上微调，相关局限与后续方向见[局限与未来工作](#️-局限与未来工作)。
 
 **HaWoR 为 EgoPipeline 提供手部伪标签。** 管线在第 04 级使用它估计相机坐标系 MANO 参数，为 MINT 的手部分支提供监督。这些标签仍包含重建误差，不能视为高精度真值。
 
 ### 世界系下的相机轨迹
 
-下表误差指标摘录自[论文](docs/asset/wuji_ego_mint.pdf) **Table 2**：HOT3D（27 条序列、94,978 帧）与 ARCTIC P2 验证集（34 条序列、25,883 帧）。序列按**完整长度评测，只做 SE(3) 对齐、不拟合尺度** —— 因此尺度误差会被计入而不是被吸收掉。弧长比定义为**真值轨迹长度 / 预测轨迹长度（GT / Pred）**，逐序列计算后等权平均：大于 1 表示预测路程偏短，小于 1 表示预测路程偏长。`MegaSaM†` 不带深度精化。`MINT w/o stage 2` 从未见过米制真值。加粗标记沿用论文；弧长比的目标为 1。
+下表误差指标摘录自[论文](https://arxiv.org/pdf/2609.04958) **Table 2**：HOT3D（27 条序列、94,978 帧）与 ARCTIC P2 验证集（34 条序列、25,883 帧）。序列按**完整长度评测，只做 SE(3) 对齐、不拟合尺度** —— 因此尺度误差会被计入而不是被吸收掉。弧长比定义为**真值轨迹长度 / 预测轨迹长度（GT / Pred）**，逐序列计算后等权平均：大于 1 表示预测路程偏短，小于 1 表示预测路程偏长。`MegaSaM†` 不带深度精化。`MINT w/o stage 2` 从未见过米制真值。加粗标记沿用论文；弧长比的目标为 1。
 
 <table>
 <thead>
