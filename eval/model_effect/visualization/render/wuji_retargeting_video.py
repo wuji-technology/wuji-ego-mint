@@ -517,7 +517,7 @@ def _decorate_frame(image: np.ndarray, validity: dict[str, bool],
           (16, 14), align="tl")
     if not any(validity.values()):
         _card(image, [("HANDS NOT DETECTED", _TEXT, 0.62, 2)],
-              (width // 2, height // 2), align="cc", alpha=0.7)
+              (width // 2, _height // 2), align="cc", alpha=0.7)
     return image
 
 
