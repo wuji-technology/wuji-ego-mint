@@ -57,6 +57,13 @@ def _video_hw(video_path: Path) -> tuple[int, int] | None:
     import cv2
 
     cap = cv2.VideoCapture(str(video_path))
+    # Phone footage carries a display-matrix rotation that OpenCV ignores
+    # unless asked; without this the frames are decoded sideways.
+    if cap.isOpened() and not cap.set(cv2.CAP_PROP_ORIENTATION_AUTO, 1):
+        raise RuntimeError(
+            "OpenCV did not apply the display-matrix rotation; "
+            "phone footage would be decoded sideways."
+        )
     if not cap.isOpened():
         return None
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))

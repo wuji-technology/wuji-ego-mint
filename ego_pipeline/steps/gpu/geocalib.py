@@ -25,6 +25,13 @@ def read_frames(
     from geocalib.utils import numpy_image_to_torch
 
     cap = cv2.VideoCapture(str(video_path))
+    # Phone footage carries a display-matrix rotation that OpenCV ignores
+    # unless asked; without this the frames are decoded sideways.
+    if cap.isOpened() and not cap.set(cv2.CAP_PROP_ORIENTATION_AUTO, 1):
+        raise RuntimeError(
+            "OpenCV did not apply the display-matrix rotation; "
+            "phone footage would be decoded sideways."
+        )
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     cap.release()
     if total <= 0:
@@ -35,6 +42,13 @@ def read_frames(
 
     def _grab(i: int):
         c = cv2.VideoCapture(str(video_path))
+        # Phone footage carries a display-matrix rotation that OpenCV ignores
+        # unless asked; without this the frames are decoded sideways.
+        if c.isOpened() and not c.set(cv2.CAP_PROP_ORIENTATION_AUTO, 1):
+            raise RuntimeError(
+                "OpenCV did not apply the display-matrix rotation; "
+                "phone footage would be decoded sideways."
+            )
         try:
             c.set(cv2.CAP_PROP_POS_FRAMES, i)
             ok, frame = c.read()

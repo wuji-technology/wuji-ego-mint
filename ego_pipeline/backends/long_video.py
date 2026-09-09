@@ -22,6 +22,13 @@ CLIP_OVERLAP_S         = float(os.environ.get('MINT_CLIP_OVERLAP_S',         '1.
 def get_video_info(video_path: str) -> tuple[float, float, int]:
     """Internal helper."""
     cap          = cv2.VideoCapture(video_path)
+    # Phone footage carries a display-matrix rotation that OpenCV ignores
+    # unless asked; without this the frames are decoded sideways.
+    if cap.isOpened() and not cap.set(cv2.CAP_PROP_ORIENTATION_AUTO, 1):
+        raise RuntimeError(
+            "OpenCV did not apply the display-matrix rotation; "
+            "phone footage would be decoded sideways."
+        )
     fps          = cap.get(cv2.CAP_PROP_FPS)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     cap.release()
@@ -33,6 +40,13 @@ def _write_clip_video(video_path: str, out_path: str,
                       start_frame: int, end_frame: int, fps: float) -> None:
     """Internal helper."""
     cap    = cv2.VideoCapture(video_path)
+    # Phone footage carries a display-matrix rotation that OpenCV ignores
+    # unless asked; without this the frames are decoded sideways.
+    if cap.isOpened() and not cap.set(cv2.CAP_PROP_ORIENTATION_AUTO, 1):
+        raise RuntimeError(
+            "OpenCV did not apply the display-matrix rotation; "
+            "phone footage would be decoded sideways."
+        )
     W      = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     H      = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
