@@ -800,6 +800,14 @@ def validate(dataset_dir: Path, *, num_frames: int = 16) -> None:
         video_key=video_key, chunk_index=v_chunk, file_index=v_file,
     )
     cap = cv2.VideoCapture(str(mp4_path))
+    # Phone footage carries a display-matrix rotation that OpenCV ignores
+    # unless asked; without this the frames are decoded sideways.
+    if cap.isOpened() and not cap.set(cv2.CAP_PROP_ORIENTATION_AUTO, 1):
+        cap.release()
+        raise RuntimeError(
+            "OpenCV did not apply the display-matrix rotation; "
+            "phone footage would be decoded sideways."
+        )
     assert cap.isOpened(), f"cannot open mp4: {mp4_path}"
     n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))

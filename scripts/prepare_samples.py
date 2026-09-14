@@ -41,6 +41,14 @@ def blur_region(frame, normalized_box) -> None:
 
 def transcode(source: Path, output: Path, masks: list, max_seconds: float, max_height: int) -> dict:
     capture = cv2.VideoCapture(str(source))
+    # Phone footage carries a display-matrix rotation that OpenCV ignores
+    # unless asked; without this the frames are decoded sideways.
+    if capture.isOpened() and not capture.set(cv2.CAP_PROP_ORIENTATION_AUTO, 1):
+        capture.release()
+        raise RuntimeError(
+            "OpenCV did not apply the display-matrix rotation; "
+            "phone footage would be decoded sideways."
+        )
     if not capture.isOpened():
         raise ValueError(f"Cannot decode reviewed clip: {source.name}")
     source_fps = float(capture.get(cv2.CAP_PROP_FPS) or 30.0)

@@ -25,15 +25,26 @@ _SENTINEL = object()
 
 def _probe_frame_count(video_path: str) -> int:
     """Internal helper."""
+    cap = cv2.VideoCapture(video_path)
+    # Phone footage carries a display-matrix rotation that OpenCV ignores
+    # unless asked; without this the frames are decoded sideways. The check sits
+    # outside the probe's try/except so an unsupported backend is reported
+    # instead of being reduced to a zero-frame video.
+    if cap.isOpened() and not cap.set(cv2.CAP_PROP_ORIENTATION_AUTO, 1):
+        cap.release()
+        raise RuntimeError(
+            "OpenCV did not apply the display-matrix rotation; "
+            "phone footage would be decoded sideways."
+        )
     try:
-        cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
             return 0
         n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        cap.release()
         return max(n, 0)
     except Exception:
         return 0
+    finally:
+        cap.release()
 
 
 def _build_ucm_grid(
@@ -189,6 +200,14 @@ def _run_video_paths(
     verbose: bool = True,
 ) -> dict:
     cap = cv2.VideoCapture(input_video)
+    # Phone footage carries a display-matrix rotation that OpenCV ignores
+    # unless asked; without this the frames are decoded sideways.
+    if cap.isOpened() and not cap.set(cv2.CAP_PROP_ORIENTATION_AUTO, 1):
+        cap.release()
+        raise RuntimeError(
+            "OpenCV did not apply the display-matrix rotation; "
+            "phone footage would be decoded sideways."
+        )
     if not cap.isOpened():
         raise ValueError(f'[backend]  {input_video}.')
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))

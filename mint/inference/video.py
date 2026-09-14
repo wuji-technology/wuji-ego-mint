@@ -27,6 +27,13 @@ def read_video(path: str | Path, max_frames: int | None = None, target_fps: floa
     capture = cv2.VideoCapture(str(source))
     if not capture.isOpened():
         raise ValueError(f"OpenCV cannot decode this video: {source.name}")
+    # Phone footage carries a display-matrix rotation that OpenCV ignores unless
+    # asked; without this the model sees sideways frames.
+    if not capture.set(cv2.CAP_PROP_ORIENTATION_AUTO, 1):
+        raise RuntimeError(
+            "OpenCV did not apply the display-matrix rotation; "
+            "phone footage would be decoded sideways."
+        )
 
     source_fps = float(capture.get(cv2.CAP_PROP_FPS) or 30.0)
     source_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
